@@ -68,8 +68,8 @@ $conn->query("
 ");
 
 // Generate Registration ID  e.g. SREG-FAC-2026-00001
-$year    = date('Y');
-$prefix  = strtoupper(substr($role, 0, 3));   // FAC, ADM, REG, CSH, LIB
+$year   = date('Y');
+$prefix = strtoupper(substr($role, 0, 3));   // FAC, ADM, REG, CSH, LIB
 $s = $conn->prepare("SELECT COUNT(*) FROM staff_pending WHERE role = ? AND YEAR(created_at) = ?");
 $s->bind_param("ss", $role, $year);
 $s->execute();
@@ -91,27 +91,32 @@ $city        = trim($data['city'] ?? '');
 $prov        = trim($data['province'] ?? '');
 $zip         = trim($data['zipCode'] ?? '');
 $dept        = trim($data['department'] ?? '');
+// FIX: position and specialization were never collected — now they are
+$pos         = trim($data['position'] ?? '');
+$spec        = trim($data['specialization'] ?? '');
 $empType     = $data['employmentType'] ?? 'Permanent';
 $accessLevel = $data['accessLevel'] ?? 'Standard';
 
+// FIX: INSERT now includes position and specialization columns
 $stmt = $conn->prepare("
     INSERT INTO staff_pending (
         registration_id, role, first_name, middle_name, last_name,
         birth_date, gender, mobile_number, personal_email,
         street_address, city, province, zip_code,
-        department, employment_type, access_level,
+        department, position, specialization, employment_type, access_level,
         status, created_at
     ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW()
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW()
     )
 ");
 
+// FIX: 18 variables, 18 "s" characters
 $stmt->bind_param(
-    "ssssssssssssssss",
+    "ssssssssssssssssss",
     $regId, $role, $fn, $mn, $ln,
     $bd, $gen, $mob, $email,
     $addr, $city, $prov, $zip,
-    $dept, $empType, $accessLevel
+    $dept, $pos, $spec, $empType, $accessLevel
 );
 
 if ($stmt->execute()) {
