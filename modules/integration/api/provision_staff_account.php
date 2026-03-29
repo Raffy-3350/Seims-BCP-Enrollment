@@ -108,18 +108,19 @@ try {
     $hashedPassword = password_hash($tempPassword, PASSWORD_BCRYPT);
 
     // ── 6. Insert into users ─────────────────────────────────────────
+    // FIX: Added temporary_password to INSERT — column is NOT NULL in the DB
     $insert = $conn->prepare("
         INSERT INTO users (
             user_id,
             first_name, middle_name, last_name,
-            institutional_email, password, must_change_password, role,
+            institutional_email, password, temporary_password, must_change_password, role,
             personal_email, mobile_number,
             birth_date, gender,
             street_address, city, province, zip_code,
             department_program, employment_type, access_level,
             status, created_at
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, 1, ?,
+            ?, ?, ?, ?, ?, ?, ?, 1, ?,
             ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, 'active', NOW()
         )
@@ -127,7 +128,7 @@ try {
     $insert->execute([
         $userId,
         $staff['first_name'], $staff['middle_name'], $staff['last_name'],
-        $finalEmail, $hashedPassword,
+        $finalEmail, $hashedPassword, $tempPassword,   // <-- temporary_password added
         $staff['role'],
         $staff['personal_email'], $staff['mobile_number'],
         $staff['birth_date'], $staff['gender'],
@@ -138,7 +139,6 @@ try {
     ]);
 
     // ── 7. Insert into staff_details ─────────────────────────────────
-    // PostgreSQL: use CREATE TABLE IF NOT EXISTS (same syntax works in PG)
     $conn->exec("
         CREATE TABLE IF NOT EXISTS staff_details (
             id               SERIAL PRIMARY KEY,
@@ -182,7 +182,7 @@ try {
             <li><strong>Temporary Password:</strong> {$tempPassword}</li>
         </ul>
         <p>For security, please change your password immediately after first login.</p>
-        <p>Login page: <a href=\"http://localhost/bcp-enrollment%20BACKUP/pages/login.php\">Open SIEMS Login</a></p>
+        <p>Login page: <a href=\"https://seims-bcp-enrollment-production.up.railway.app/pages/login.php\">Open SIEMS Login</a></p>
     ";
     $emailSent = sendEmail($staff['personal_email'], $subject, $body);
 
