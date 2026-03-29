@@ -11,7 +11,7 @@ require_once __DIR__ . '/config.php';
 try {
     $conn = getDBConnection();
 
-    // Only show approved staff without an account yet
+    // FIX: removed MySQL-only COLLATE utf8mb4_unicode_ci — not valid in PostgreSQL
     $stmt = $conn->query("
         SELECT
             sp.id               AS staff_id,
@@ -35,21 +35,17 @@ try {
             sp.zip_code,
             sp.status           AS registration_status,
             sp.created_at       AS registered_at,
-            CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END AS has_account
+            CASE WHEN u.id IS NOT NULL THEN true ELSE false END AS has_account
         FROM staff_pending sp
         LEFT JOIN users u
             ON u.role = sp.role
-           AND u.personal_email COLLATE utf8mb4_unicode_ci = sp.personal_email COLLATE utf8mb4_unicode_ci
+           AND LOWER(u.personal_email) = LOWER(sp.personal_email)
         WHERE sp.status = 'approved'
           AND u.id IS NULL
         ORDER BY sp.created_at DESC
     ");
 
-    $staff = [];
-    while ($row = $stmt->fetch_assoc()) {
-        $row['has_account'] = false;
-        $staff[] = $row;
-    }
+    $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Stats
     $statsStmt = $conn->query("
@@ -58,16 +54,16 @@ try {
              FROM staff_pending sp
              LEFT JOIN users u
                 ON u.role = sp.role
-               AND u.personal_email COLLATE utf8mb4_unicode_ci = sp.personal_email COLLATE utf8mb4_unicode_ci
+               AND LOWER(u.personal_email) = LOWER(sp.personal_email)
              WHERE sp.status = 'approved'
-               AND u.id IS NULL)                                                    AS pending,
+               AND u.id IS NULL)                                        AS pending,
             (SELECT COUNT(*)
              FROM users
              WHERE role != 'student'
-               AND DATE(created_at) = CURDATE())                                    AS today,
-            (SELECT COUNT(*) FROM staff_pending)                                    AS total
+               AND DATE(created_at) = CURRENT_DATE)                    AS today,
+            (SELECT COUNT(*) FROM staff_pending)                        AS total
     ");
-    $stats = $statsStmt->fetch_assoc();
+    $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'success' => true,
