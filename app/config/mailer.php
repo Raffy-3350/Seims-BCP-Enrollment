@@ -17,6 +17,9 @@ function sendEmail($to, $subject, $body) {
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
 
+        // FIX: Set timeouts so SMTP never hangs the page indefinitely
+        $mail->Timeout    = 10;  // seconds to wait for SMTP connection
+
         // FIX: From address MUST match the Gmail account used for SMTP auth.
         // Gmail rejects emails where From != authenticated account.
         $mail->setFrom('aedannearcilla377@gmail.com', 'BCP SIEMS Notification');
