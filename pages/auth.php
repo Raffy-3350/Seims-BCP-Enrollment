@@ -6,8 +6,10 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/db.php';
-require_once __DIR__ . '/../app/config/mailer.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $identifier = trim($_POST["identifier"] ?? '');
 $password   = $_POST["password"]        ?? '';
