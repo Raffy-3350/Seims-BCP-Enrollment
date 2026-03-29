@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCP SIEMS | Users Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        .table-row:hover { background-color: #f8fafc; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .badge-student    { background-color: #dbeafe; color: #1e40af; }
+        .badge-faculty    { background-color: #fef3c7; color: #92400e; }
+        .badge-admin      { background-color: #fce7f3; color: #9f1239; }
+        .badge-superadmin { background-color: #ede9fe; color: #6d28d9; }
+        .badge-registrar  { background-color: #e0e7ff; color: #3730a3; }
+        .badge-cashier    { background-color: #ffe4e6; color: #be123c; }
+        .badge-librarian  { background-color: #d1fae5; color: #065f46; }
+
+        /* Page Tab Navigation */
+        .page-tab { transition: all 0.25s; color: #64748b; font-weight: 700; border-bottom: 3px solid transparent; }
+        .page-tab.active { color: #1e40af; border-bottom-color: #1e40af; }
+        .page-tab:hover:not(.active) { color: #334155; }
+
+        /* Page sections */
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal.active { display: flex; opacity: 1; }
+        .modal-content { transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal.active .modal-content { transform: scale(1); }
+        .info-row { border-bottom: 1px solid #f1f5f9; padding: 0.75rem 0; }
+        .info-row:last-child { border-bottom: none; }
+
+        /* Role Permission Styles */
+        .glass-input { background: #ffffff; border: 1.5px solid #e2e8f0; transition: all 0.2s; border-radius: 0.75rem; }
+        .glass-input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1); outline: none; }
+        .perm-tab-btn { transition: all 0.25s; color: #94a3b8; font-weight: 700; font-size: 0.7rem; }
+        .perm-tab-btn.active { background-color: #1e3a8a; color: white !important; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25); }
+        .perm-view { display: none; }
+        .perm-view.active { display: block; animation: fadeIn 0.3s ease; }
+
+        /* Role card sidebar */
+        .role-card { transition: all 0.2s; cursor: pointer; border: 2px solid transparent; }
+        .role-card:hover { border-color: #cbd5e1; background-color: #f8fafc; }
+        .role-card.active { border-color: #1e3a8a; background-color: #eff6ff; }
+        .role-card.active .role-card-icon { background-color: #1e3a8a; color: white; }
+        .role-card.active .role-card-name { color: #1e3a8a; }
+
+        /* Permission toggle rows */
+        .perm-row { transition: background 0.15s; }
+        .perm-row:hover { background-color: #f8fafc; }
+        .perm-toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+        .perm-toggle input { opacity: 0; width: 0; height: 0; }
+        .perm-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: 0.25s; border-radius: 22px; }
+        .perm-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: 0.25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .perm-toggle input:checked + .perm-slider { background-color: #1e3a8a; }
+        .perm-toggle input:checked + .perm-slider:before { transform: translateX(18px); }
+
+        /* Module section headers */
+        .module-header { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-left: 3px solid; }
+
+        /* Audit log badge */
+        .audit-badge-success { background: #dcfce7; color: #15803d; }
+        .audit-badge-blocked { background: #fee2e2; color: #dc2626; }
+        .audit-badge-warning { background: #fef9c3; color: #a16207; }
+        
+        /* Audit log toggle icon */
+        .audit-toggle-icon { transition: transform 0.2s; }
+        tr.is-open .audit-toggle-icon { transform: rotate(90deg); }
+
+        /* Role pill tags */
+        .role-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
+        .role-pill-superadmin { background: #ede9fe; color: #6d28d9; }
+        .role-pill-registrar { background: #e0f2fe; color: #0369a1; }
+        .role-pill-faculty { background: #fef3c7; color: #92400e; }
+        .role-pill-student { background: #dbeafe; color: #1e40af; }
+        .role-pill-cashier { background: #fce7f3; color: #9f1239; }
+        .role-pill-librarian { background: #d1fae5; color: #065f46; }
+
+    </style>
+</head>
+<body class="min-h-screen p-6">
+
+<div class="max-w-7xl mx-auto">
+
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-slate-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-users text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800">Users Management</h1>
+                    <p class="text-sm text-slate-500 font-medium">Bestlink College of the Philippines</p>
+                </div>
+            </div>
+            <a href="user_creation.html" id="addUserBtn" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                <span>ADD NEW USER</span>
+            </a>
+        </div>
+
+        <div class="flex gap-8 mt-6 border-t border-slate-100 pt-4">
+            <button onclick="switchPageTab('users', this)" class="page-tab active pb-1 text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-users"></i> Users Table
+            </button>
+            <button onclick="switchPageTab('permissions', this)" class="page-tab pb-1 text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-shield-halved"></i> Role & Permissions
+            </button>
+        </div>
+    </div>
+
+    <div id="usersSection" class="page-section active">
+
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-6 border border-slate-200">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="searchInput" placeholder="Search by name, ID, or email..."
+                            class="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onkeyup="filterUsers()">
+                    </div>
+                </div>
+                <div>
+                    <select id="roleFilter" onchange="filterUsers()"
+                        class="px-6 py-3 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white">
+                        <option value="all">All Roles</option>
+                        <option value="student">Student</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="admin">Admin</option>
+                        <option value="superadmin">Super Admin</option>
+                        <option value="registrar">Registrar</option>
+                        <option value="cashier">Cashier</option>
+                        <option value="librarian">Librarian</option>
+                    </select>
+                </div>
+                <button onclick="loadUsers()"
+                    class="px-6 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>REFRESH</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">User ID</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Full Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Role</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Contact</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Files</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase tracking-wider">Enrolled</th>
+                            <th class="px-6 py-4 text-center text-xs font-black text-slate-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center">
+                                <i class="fas fa-spinner fa-spin text-4xl text-slate-300 mb-3"></i>
+                                <p class="text-slate-400 font-medium">Loading users...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="permissionsSection" class="page-section">
+
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-200 mb-5 px-6 py-4 flex items-center justify-between">
+            <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
+                <button onclick="switchPermTab('matrix', this)" class="perm-tab-btn active px-5 py-2 rounded-lg uppercase tracking-wider">
+                    <i class="fas fa-table-cells mr-1.5"></i>Permissions Matrix
+                </button>
+                <button onclick="switchPermTab('roles', this)" class="perm-tab-btn px-5 py-2 rounded-lg uppercase tracking-wider">
+                    <i class="fas fa-user-tag mr-1.5"></i>Role Assignments
+                </button>
+                <button onclick="switchPermTab('audit', this)" class="perm-tab-btn px-5 py-2 rounded-lg uppercase tracking-wider">
+                    <i class="fas fa-scroll mr-1.5"></i>Audit Log
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-400 font-medium">Role-Based Access Control (RBAC)</span>
+                <div class="w-2 h-2 rounded-full bg-green-400"></div>
+                <span class="text-xs font-bold text-green-600">Active</span>
+            </div>
+        </div>
+
+        <div id="matrixView" class="perm-view active">
+
+            <div class="flex gap-5">
+
+                <div class="w-56 flex-shrink-0 space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-3">System Roles</p>
+
+                    <div class="role-card active bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('superadmin', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-crown text-violet-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Super Admin</p>
+                            <p class="text-[10px] text-slate-400">Full system access</p>
+                        </div>
+                    </div>
+
+                    <div class="role-card bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('registrar', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-file-invoice text-blue-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Registrar</p>
+                            <p class="text-[10px] text-slate-400">Enrollment & records</p>
+                        </div>
+                    </div>
+
+                    <div class="role-card bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('faculty', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-chalkboard-teacher text-amber-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Faculty</p>
+                            <p class="text-[10px] text-slate-400">Teaching & grades</p>
+                        </div>
+                    </div>
+
+                    <div class="role-card bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('cashier', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-cash-register text-rose-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Cashier</p>
+                            <p class="text-[10px] text-slate-400">Payments & finance</p>
+                        </div>
+                    </div>
+
+                    <div class="role-card bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('librarian', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-book text-emerald-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Librarian</p>
+                            <p class="text-[10px] text-slate-400">Library resources</p>
+                        </div>
+                    </div>
+
+                    <div class="role-card bg-white rounded-xl p-3.5 flex items-center gap-3 shadow-sm" onclick="selectRoleMatrix('student', this)">
+                        <div class="role-card-icon w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center transition-colors">
+                            <i class="fas fa-user-graduate text-sky-700 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="role-card-name text-xs font-black text-slate-800 transition-colors">Student</p>
+                            <p class="text-[10px] text-slate-400">Own records only</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button onclick="openNewRoleModal()" class="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs font-bold text-slate-400 hover:border-blue-300 hover:text-blue-500 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-plus"></i> New Role
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div class="flex items-center gap-3">
+                            <div id="matrixRoleIcon" class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                                <i class="fas fa-crown text-violet-700 text-xs"></i>
+                            </div>
+                            <div>
+                                <h3 id="matrixRoleTitle" class="text-sm font-black text-slate-800">Super Admin</h3>
+                                <p id="matrixRoleDesc" class="text-[10px] text-slate-400">Full system access — cannot be restricted</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-500">
+                                <input type="checkbox" id="selectAllToggle" onchange="toggleAllPerms(this.checked)" class="w-4 h-4 accent-blue-900" checked>
+                                Select All
+                            </label>
+                            <button onclick="savePermissions()" class="px-4 py-2 bg-blue-900 text-white text-xs font-bold rounded-lg hover:bg-blue-800 transition flex items-center gap-2">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="permissionGrid" class="divide-y divide-slate-50 overflow-y-auto" style="max-height: 68vh;">
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-blue-400" style="background:linear-gradient(135deg,#eff6ff,#f0f9ff)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-clipboard-list text-blue-600 text-xs"></i>
+                                <span class="text-xs font-black text-blue-800 uppercase tracking-wider">Enrollment Management</span>
+                            </div>
+                            <button onclick="toggleModule('enrollment', this)" class="text-[10px] font-bold text-blue-500 hover:text-blue-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="enrollment">
+                            <div><p class="text-sm font-bold text-slate-700">View Enrollment Records</p><p class="text-xs text-slate-400 mt-0.5">Read-only access to all enrollment data and student lists</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="enrollment.view" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="enrollment">
+                            <div><p class="text-sm font-bold text-slate-700">Create New Enrollment</p><p class="text-xs text-slate-400 mt-0.5">Enroll new students and generate system credentials</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="enrollment.create" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="enrollment">
+                            <div><p class="text-sm font-bold text-slate-700">Approve / Reject Enrollment</p><p class="text-xs text-slate-400 mt-0.5">Authorize or decline submitted enrollment applications</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="enrollment.approve" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="enrollment">
+                            <div><p class="text-sm font-bold text-slate-700">Section & Schedule Loading</p><p class="text-xs text-slate-400 mt-0.5">Assign students to sections and manage class schedules</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="enrollment.schedule" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-emerald-400" style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-graduation-cap text-emerald-600 text-xs"></i>
+                                <span class="text-xs font-black text-emerald-800 uppercase tracking-wider">Academic Records</span>
+                            </div>
+                            <button onclick="toggleModule('academic', this)" class="text-[10px] font-bold text-emerald-500 hover:text-emerald-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="academic">
+                            <div><p class="text-sm font-bold text-slate-700">View Grades</p><p class="text-xs text-slate-400 mt-0.5">Read student grades, GPA, and academic standing</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="academic.grades.view" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="academic">
+                            <div><p class="text-sm font-bold text-slate-700">Encode / Edit Grades</p><p class="text-xs text-slate-400 mt-0.5">Enter or modify student grades within the grading period</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="academic.grades.edit" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="academic">
+                            <div><p class="text-sm font-bold text-slate-700">Issue Transcripts & Documents</p><p class="text-xs text-slate-400 mt-0.5">Generate official documents: TOR, COG, COE, Diploma</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="academic.transcript" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="academic">
+                            <div><p class="text-sm font-bold text-slate-700">Manage Subjects & Curriculum</p><p class="text-xs text-slate-400 mt-0.5">Create, edit, and archive course subjects and curriculum maps</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="academic.subjects" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-amber-400" style="background:linear-gradient(135deg,#fffbeb,#fef3c7)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-peso-sign text-amber-600 text-xs"></i>
+                                <span class="text-xs font-black text-amber-800 uppercase tracking-wider">Finance & Billing</span>
+                            </div>
+                            <button onclick="toggleModule('finance', this)" class="text-[10px] font-bold text-amber-500 hover:text-amber-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="finance">
+                            <div><p class="text-sm font-bold text-slate-700">View Financial Records</p><p class="text-xs text-slate-400 mt-0.5">Read tuition balances, payment history, and billing statements</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="finance.view" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="finance">
+                            <div><p class="text-sm font-bold text-slate-700">Post Payments & Receipts</p><p class="text-xs text-slate-400 mt-0.5">Record tuition payments and issue official receipts</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="finance.post" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="finance">
+                            <div><p class="text-sm font-bold text-slate-700">Apply Scholarships & Discounts</p><p class="text-xs text-slate-400 mt-0.5">Tag scholarship grants, waivers, and discount programs</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="finance.scholarship" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="finance">
+                            <div><p class="text-sm font-bold text-slate-700">Place / Lift Financial Holds</p><p class="text-xs text-slate-400 mt-0.5">Restrict or restore student access due to outstanding balances</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="finance.holds" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-slate-400" style="background:linear-gradient(135deg,#f8fafc,#f1f5f9)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-users-gear text-slate-600 text-xs"></i>
+                                <span class="text-xs font-black text-slate-700 uppercase tracking-wider">User Management</span>
+                            </div>
+                            <button onclick="toggleModule('users', this)" class="text-[10px] font-bold text-slate-500 hover:text-slate-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="users">
+                            <div><p class="text-sm font-bold text-slate-700">View All Users</p><p class="text-xs text-slate-400 mt-0.5">Browse the full user directory (students, faculty, staff)</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="users.view" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="users">
+                            <div><p class="text-sm font-bold text-slate-700">Create & Edit Users</p><p class="text-xs text-slate-400 mt-0.5">Add new accounts and modify user profile information</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="users.edit" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="users">
+                            <div><p class="text-sm font-bold text-slate-700">Delete Users</p><p class="text-xs text-slate-400 mt-0.5">Permanently remove user accounts from the system</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="users.delete" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="users">
+                            <div><p class="text-sm font-bold text-slate-700">Reset Passwords</p><p class="text-xs text-slate-400 mt-0.5">Force password resets and manage account credentials</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="users.password" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-rose-400" style="background:linear-gradient(135deg,#fff1f2,#ffe4e6)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-shield-halved text-rose-600 text-xs"></i>
+                                <span class="text-xs font-black text-rose-800 uppercase tracking-wider">System & Security</span>
+                            </div>
+                            <button onclick="toggleModule('system', this)" class="text-[10px] font-bold text-rose-500 hover:text-rose-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="system">
+                            <div><p class="text-sm font-bold text-slate-700">Manage Roles & Permissions</p><p class="text-xs text-slate-400 mt-0.5">Configure RBAC roles, assign permissions, view audit logs</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="system.rbac" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="system">
+                            <div><p class="text-sm font-bold text-slate-700">View Audit Trail</p><p class="text-xs text-slate-400 mt-0.5">Read system logs of all administrative and security actions</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="system.audit" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="system">
+                            <div><p class="text-sm font-bold text-slate-700">System Configuration</p><p class="text-xs text-slate-400 mt-0.5">Modify system settings, academic calendar, and school parameters</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="system.config" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="system">
+                            <div><p class="text-sm font-bold text-slate-700">Database Backup & Restore</p><p class="text-xs text-slate-400 mt-0.5">Trigger manual backups and restore data from backup points</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="system.backup" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                        <div class="px-6 py-3 flex items-center justify-between border-l-4 border-indigo-400" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff)">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-chart-bar text-indigo-600 text-xs"></i>
+                                <span class="text-xs font-black text-indigo-800 uppercase tracking-wider">Reports & Analytics</span>
+                            </div>
+                            <button onclick="toggleModule('reports', this)" class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700">Grant All</button>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="reports">
+                            <div><p class="text-sm font-bold text-slate-700">View Reports & Dashboards</p><p class="text-xs text-slate-400 mt-0.5">Access enrollment stats, grade distributions, and financial summaries</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="reports.view" checked><span class="perm-slider"></span></label>
+                        </div>
+                        <div class="perm-row px-6 py-3.5 flex items-center justify-between" data-module="reports">
+                            <div><p class="text-sm font-bold text-slate-700">Export Reports</p><p class="text-xs text-slate-400 mt-0.5">Download reports as PDF, Excel, or CSV files</p></div>
+                            <label class="perm-toggle"><input type="checkbox" data-perm="reports.export" checked><span class="perm-slider"></span></label>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="rolesView" class="perm-view">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+                    <div>
+                        <h3 class="text-base font-black text-slate-800 flex items-center gap-2 mb-1">
+                            <i class="fas fa-user-plus text-blue-600"></i> Assign a Role
+                        </h3>
+                        <p class="text-xs text-slate-400">Search for a user and grant them a system role.</p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Search User</label>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3.5 top-3.5 text-slate-300 text-xs"></i>
+                            <input type="text" id="assignSearchInput" oninput="filterAssignUsers()" onfocus="filterAssignUsers()" placeholder="Type name or email..." class="glass-input w-full pl-9 pr-4 py-3 text-sm font-medium" autocomplete="off">
+                        </div>
+                        <div id="assignSearchResults" class="hidden bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto" style="position:relative;z-index:100;">
+                        </div>
+                    </div>
+
+                    <div id="selectedUserCard" class="hidden bg-slate-50 rounded-xl p-4 border border-slate-200">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div id="assignUserIcon" class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p id="assignUserName" class="text-sm font-black text-slate-800">—</p>
+                                <p id="assignUserEmail" class="text-[10px] text-slate-400">—</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Role</label>
+                            <p id="assignUserCurrentRole" class="text-xs font-bold text-slate-600 bg-white rounded-lg px-3 py-2 border border-slate-200 mt-1">—</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assign New Role</label>
+                        <select id="assignRoleSelect" class="glass-input w-full px-4 py-3 text-sm font-bold bg-white">
+                            <option value="">Choose a role...</option>
+                            <option value="superadmin">Super Admin</option>
+                            <option value="registrar">Registrar</option>
+                            <option value="faculty">Faculty</option>
+                            <option value="cashier">Cashier</option>
+                            <option value="librarian">Librarian</option>
+                            <option value="student">Student</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason <span class="text-slate-300 normal-case font-normal">(optional)</span></label>
+                        <textarea id="assignReason" rows="2" placeholder="e.g. Promoted to department coordinator" class="glass-input w-full px-4 py-3 text-sm resize-none"></textarea>
+                    </div>
+
+                    <button onclick="submitRoleAssignment()" class="w-full py-3 bg-blue-900 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-800 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle"></i> Confirm Role Assignment
+                    </button>
+                </div>
+
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-list-check text-slate-500"></i> Current Role Assignments
+                            <span id="assignmentCount" class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">0</span>
+                        </h3>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-slate-300 text-xs"></i>
+                            <input type="text" id="assignmentFilterInput" oninput="filterAssignmentTable()" placeholder="Filter by name or role..." class="glass-input pl-8 pr-4 py-2 text-xs font-medium w-52">
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto" style="max-height: 72vh;">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+                                <tr>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">User</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Assigned Role</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Granted By</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assignmentTableBody" class="divide-y divide-slate-50">
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-5 py-3.5"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center"><i class="fas fa-crown text-violet-600 text-xs"></i></div><div><p class="text-xs font-bold text-slate-800">Admin BCP</p><p class="text-[10px] text-slate-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1776737a7e79577574673972736239677f">[email&#160;protected]</a></p></div></div></td>
+                                    <td class="px-5 py-3.5"><span class="role-pill role-pill-superadmin"><i class="fas fa-crown text-[9px]"></i> Super Admin</span></td>
+                                    <td class="px-5 py-3.5 text-xs text-slate-500">System</td>
+                                    <td class="px-5 py-3.5 text-xs font-mono text-slate-400">2026-01-01</td>
+                                    <td class="px-5 py-3.5 text-center"><span class="text-[10px] font-bold text-slate-300">Protected</span></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-5 py-3.5"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-file-invoice text-blue-600 text-xs"></i></div><div><p class="text-xs font-bold text-slate-800">Lina Reyes</p><p class="text-[10px] text-slate-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e08cce9285998593a0828390ce858495ce9088">[email&#160;protected]</a></p></div></div></td>
+                                    <td class="px-5 py-3.5"><span class="role-pill role-pill-registrar"><i class="fas fa-file-invoice text-[9px]"></i> Registrar</span></td>
+                                    <td class="px-5 py-3.5 text-xs text-slate-500"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f190959c989fb1939281df949584df8199">[email&#160;protected]</a></td>
+                                    <td class="px-5 py-3.5 text-xs font-mono text-slate-400">2026-02-05</td>
+                                    <td class="px-5 py-3.5 text-center"><button onclick="revokeRole(this,'Lina Reyes')" class="text-xs font-bold text-red-400 hover:text-red-600 transition">Revoke</button></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-5 py-3.5"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center"><i class="fas fa-chalkboard-teacher text-amber-600 text-xs"></i></div><div><p class="text-xs font-bold text-slate-800">Jose Delmundo</p><p class="text-[10px] text-slate-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="046e2a60616869716a606b446667742a6160712a746c">[email&#160;protected]</a></p></div></div></td>
+                                    <td class="px-5 py-3.5"><span class="role-pill role-pill-faculty"><i class="fas fa-chalkboard-teacher text-[9px]"></i> Faculty</span></td>
+                                    <td class="px-5 py-3.5 text-xs text-slate-500"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="88e9ece5e1e6c8eaebf8a6edecfda6f8e0">[email&#160;protected]</a></td>
+                                    <td class="px-5 py-3.5 text-xs font-mono text-slate-400">2026-02-10</td>
+                                    <td class="px-5 py-3.5 text-center"><button onclick="revokeRole(this,'Jose Delmundo')" class="text-xs font-bold text-red-400 hover:text-red-600 transition">Revoke</button></td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-5 py-3.5"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center"><i class="fas fa-cash-register text-rose-600 text-xs"></i></div><div><p class="text-xs font-bold text-slate-800">Ana Cruz</p><p class="text-[10px] text-slate-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6b0a4508191e112b09081b450e0f1e451b03">[email&#160;protected]</a></p></div></div></td>
+                                    <td class="px-5 py-3.5"><span class="role-pill role-pill-cashier"><i class="fas fa-cash-register text-[9px]"></i> Cashier</span></td>
+                                    <td class="px-5 py-3.5 text-xs text-slate-500"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="eb8a8f868285ab89889bc58e8f9ec59b83">[email&#160;protected]</a></td>
+                                    <td class="px-5 py-3.5 text-xs font-mono text-slate-400">2026-02-12</td>
+                                    <td class="px-5 py-3.5 text-center"><button onclick="revokeRole(this,'Ana Cruz')" class="text-xs font-bold text-red-400 hover:text-red-600 transition">Revoke</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="auditView" class="perm-view">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2"><i class="fas fa-scroll text-slate-500"></i> Security & Access Audit Log</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Every role assignment, permission change, and access event is recorded here.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select class="glass-input px-3 py-2 text-xs font-bold bg-white" onchange="renderAuditLog(this.value)">
+                            <option>All Events</option>
+                            <option>Role Changes</option>
+                            <option>Permission Changes</option>
+                            <option>User Creation</option>
+                            <option>User Deletion</option>
+                            <option>Failed Access</option>
+                        </select>
+                        <button class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition flex items-center gap-1.5">
+                            <i class="fas fa-file-export"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-y-auto" style="max-height: 72vh;">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Timestamp</th>
+                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Performed By</th>
+                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Event</th>
+                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Affected</th>
+                                <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody" class="divide-y divide-slate-50">
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">2026-02-27 10:42:18</td>
+                                <td class="px-6 py-4"><div class="flex items-center gap-2"><div class="w-6 h-6 bg-violet-100 rounded flex items-center justify-center"><i class="fas fa-crown text-violet-600 text-[9px]"></i></div><div><p class="text-xs font-bold text-slate-800"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6c0d080105022c0e0f1c42090819421c04">[email&#160;protected]</a></p><span class="role-pill role-pill-superadmin text-[9px]">Super Admin</span></div></div></td>
+                                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">Permission Changed</p><p class="text-[10px] text-slate-400">Enabled <code class="bg-slate-100 px-1 rounded">finance.holds</code> for Registrar role</p></td>
+                                <td class="px-6 py-4 text-xs text-slate-500">Registrar role</td>
+                                <td class="px-6 py-4 text-center"><span class="audit-badge-success px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">Saved</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">2026-02-27 09:15:03</td>
+                                <td class="px-6 py-4"><div class="flex items-center gap-2"><div class="w-6 h-6 bg-violet-100 rounded flex items-center justify-center"><i class="fas fa-crown text-violet-600 text-[9px]"></i></div><div><p class="text-xs font-bold text-slate-800"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0b6a6f6662654b69687b256e6f7e257b63">[email&#160;protected]</a></p><span class="role-pill role-pill-superadmin text-[9px]">Super Admin</span></div></div></td>
+                                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">Role Assigned</p><p class="text-[10px] text-slate-400">Assigned <strong>Faculty</strong> role to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b2d89cd6d7dedfc7dcd6ddf2d0d1c29cd7d6c79cc2da">[email&#160;protected]</a></p></td>
+                                <td class="px-6 py-4 text-xs text-slate-500">Jose Delmundo</td>
+                                <td class="px-6 py-4 text-center"><span class="audit-badge-success px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">Success</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">2026-02-26 17:34:51</td>
+                                <td class="px-6 py-4"><div class="flex items-center gap-2"><div class="w-6 h-6 bg-blue-100 rounded flex items-center justify-center"><i class="fas fa-file-invoice text-blue-600 text-[9px]"></i></div><div><p class="text-xs font-bold text-slate-800"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b0dc9ec2d5c9d5c3f0d2d3c09ed5d4c59ec0d8">[email&#160;protected]</a></p><span class="role-pill role-pill-registrar text-[9px]">Registrar</span></div></div></td>
+                                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">Unauthorized Access Attempt</p><p class="text-[10px] text-slate-400">Tried to access <code class="bg-slate-100 px-1 rounded">system.rbac</code> — permission denied</p></td>
+                                <td class="px-6 py-4 text-xs text-slate-500">Permissions page</td>
+                                <td class="px-6 py-4 text-center"><span class="audit-badge-blocked px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">Blocked</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">2026-02-26 14:20:09</td>
+                                <td class="px-6 py-4"><div class="flex items-center gap-2"><div class="w-6 h-6 bg-violet-100 rounded flex items-center justify-center"><i class="fas fa-crown text-violet-600 text-[9px]"></i></div><div><p class="text-xs font-bold text-slate-800"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f190959c989fb1939281df949584df8199">[email&#160;protected]</a></p><span class="role-pill role-pill-superadmin text-[9px]">Super Admin</span></div></div></td>
+                                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">Role Revoked</p><p class="text-[10px] text-slate-400">Removed <strong>Cashier</strong> role from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="63134d11061a0610230100134d0607164d130b">[email&#160;protected]</a></p></td>
+                                <td class="px-6 py-4 text-xs text-slate-500">Pedro Reyes</td>
+                                <td class="px-6 py-4 text-center"><span class="audit-badge-warning px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">Revoked</span></td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">2026-02-25 08:05:44</td>
+                                <td class="px-6 py-4"><div class="flex items-center gap-2"><div class="w-6 h-6 bg-violet-100 rounded flex items-center justify-center"><i class="fas fa-crown text-violet-600 text-[9px]"></i></div><div><p class="text-xs font-bold text-slate-800"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4c2d282125220c2e2f3c62292839623c24">[email&#160;protected]</a></p><span class="role-pill role-pill-superadmin text-[9px]">Super Admin</span></div></div></td>
+                                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">Bulk Permission Update</p><p class="text-[10px] text-slate-400">Updated 6 permissions in the Faculty role matrix</p></td>
+                                <td class="px-6 py-4 text-xs text-slate-500">Faculty role</td>
+                                <td class="px-6 py-4 text-center"><span class="audit-badge-success px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">Saved</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="userModal" class="modal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-content bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+
+        <div class="relative bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 rounded-t-3xl">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-white hover:text-gray-200 transition">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+            <div class="flex items-center gap-6">
+                <div class="w-32 h-32 bg-white rounded-2xl flex items-center justify-center border-4 border-blue-400 shadow-xl">
+                    <div class="text-center">
+                        <i id="modalPhotoIcon" class="fas fa-user text-5xl text-blue-600"></i>
+                        <p class="text-[8px] text-slate-400 mt-1 font-bold">PHOTO</p>
+                    </div>
+                </div>
+                <div class="flex-1 text-white">
+                    <h2 id="modalFullName" class="text-3xl font-black mb-1">Loading...</h2>
+                    <p id="modalUserId" class="text-blue-100 font-mono text-lg font-bold mb-2">ID: ---</p>
+                    <span id="modalRoleBadge" class="inline-block px-4 py-1 bg-white text-blue-600 rounded-full text-xs font-black uppercase">Role</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-8">
+
+            <div class="mb-8">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-envelope"></i> Contact Information
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Institutional Email</span>
+                        <span id="modalInstitutionalEmail" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Personal Email</span>
+                        <span id="modalPersonalEmail" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Mobile Number</span>
+                        <span id="modalMobileNumber" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-id-card"></i> Personal Information
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Birth Date</span>
+                        <span id="modalBirthDate" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Gender</span>
+                        <span id="modalGender" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalLrnRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">LRN</span>
+                        <span id="modalLrn" class="text-slate-800 font-bold text-sm font-mono">---</span>
+                    </div>
+                    <div id="modalEmployeeIdRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Employee ID</span>
+                        <span id="modalEmployeeId" class="text-slate-800 font-bold text-sm font-mono">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 id="modalAcademicTitle" class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-graduation-cap"></i> Academic Information
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span id="modalProgramLabel" class="text-slate-500 text-sm font-medium">Program</span>
+                        <span id="modalProgram" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalYearRow" class="info-row flex justify-between">
+                        <span id="modalYearLabel" class="text-slate-500 text-sm font-medium">Year Level</span>
+                        <span id="modalYear" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalMajorRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Major</span>
+                        <span id="modalMajor" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalStatusRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Enrollment Status</span>
+                        <span id="modalStatus" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalSpecializationRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Specialization</span>
+                        <span id="modalSpecialization" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalEmploymentTypeRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Employment Type</span>
+                        <span id="modalEmploymentType" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div id="modalAccessLevelRow" class="info-row flex justify-between" style="display: none;">
+                        <span class="text-slate-500 text-sm font-medium">Access Level</span>
+                        <span id="modalAccessLevel" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalGuardianSection" class="mb-8" style="display: none;">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-friends"></i> Guardian Information
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Guardian Name</span>
+                        <span id="modalGuardianName" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Guardian Contact</span>
+                        <span id="modalGuardianContact" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Relationship</span>
+                        <span id="modalGuardianRelationship" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt"></i> Address
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Street Address</span>
+                        <span id="modalStreetAddress" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Barangay</span>
+                        <span id="modalBarangay" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">City</span>
+                        <span id="modalCity" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Province</span>
+                        <span id="modalProvince" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">ZIP Code</span>
+                        <span id="modalZipCode" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fas fa-cog"></i> System Information
+                </h3>
+                <div class="bg-slate-50 rounded-2xl p-6 space-y-3">
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Date Enrolled</span>
+                        <span id="modalCreatedAt" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                    <div class="info-row flex justify-between">
+                        <span class="text-slate-500 text-sm font-medium">Last Updated</span>
+                        <span id="modalUpdatedAt" class="text-slate-800 font-bold text-sm">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t border-slate-100">
+                <button onclick="closeModal()" class="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition">
+                    Close
+                </button>
+                <button onclick="deleteUserFromModal()" class="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-trash"></i> Delete User
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    const API_BASE_URL = '../api';
+    let allUsers = [];
+    let currentUser = null;
+
+    // ===================== PAGE TAB SWITCHING =====================
+    function switchPageTab(tab, btn) {
+        // Update tab buttons
+        document.querySelectorAll('.page-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Toggle sections
+        document.getElementById('usersSection').classList.remove('active');
+        document.getElementById('permissionsSection').classList.remove('active');
+
+        if (tab === 'users') {
+            document.getElementById('usersSection').classList.add('active');
+            document.getElementById('addUserBtn').style.display = 'flex';
+        } else {
+            document.getElementById('permissionsSection').classList.add('active');
+            document.getElementById('addUserBtn').style.display = 'none';
+        }
+    }
+
+
+    // ===================== RBAC PERMISSION DATA =====================
+    const roleDefaults = {
+        superadmin: { all: true, icon: '<i class="fas fa-crown text-violet-700 text-xs"></i>', bg: 'bg-violet-100', title: 'Super Admin', desc: 'Full system access — cannot be restricted' },
+        registrar:  { perms: ['enrollment.view','enrollment.create','enrollment.approve','enrollment.schedule','academic.grades.view','academic.transcript','academic.subjects','users.view','reports.view','reports.export'], icon: '<i class="fas fa-file-invoice text-blue-700 text-xs"></i>', bg: 'bg-blue-100', title: 'Registrar', desc: 'Enrollment processing, records management, document issuance' },
+        faculty:    { perms: ['enrollment.view','academic.grades.view','academic.grades.edit','users.view','reports.view'], icon: '<i class="fas fa-chalkboard-teacher text-amber-700 text-xs"></i>', bg: 'bg-amber-100', title: 'Faculty', desc: 'Grade encoding, class management, student records (read-only)' },
+        cashier:    { perms: ['finance.view','finance.post','finance.scholarship','finance.holds','users.view','reports.view','reports.export'], icon: '<i class="fas fa-cash-register text-rose-700 text-xs"></i>', bg: 'bg-rose-100', title: 'Cashier', desc: 'Payment posting, receipts, financial holds, scholarship tagging' },
+        librarian:  { perms: ['users.view','reports.view'], icon: '<i class="fas fa-book text-emerald-700 text-xs"></i>', bg: 'bg-emerald-100', title: 'Librarian', desc: 'Library resources and student lookup only' },
+        student:    { perms: ['academic.grades.view','finance.view'], icon: '<i class="fas fa-user-graduate text-sky-700 text-xs"></i>', bg: 'bg-sky-100', title: 'Student', desc: 'View own grades and billing statements only' },
+    };
+    let currentMatrixRole = 'superadmin';
+
+    // ===================== PERMISSION TAB SWITCHING =====================
+    function switchPermTab(mode, btn) {
+        document.querySelectorAll('.perm-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ['matrixView','rolesView','auditView'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
+        });
+        const target = document.getElementById(mode + 'View');
+        if (target) target.classList.add('active');
+    }
+
+    async function selectRoleMatrix(role, card) {
+        document.querySelectorAll('.role-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        currentMatrixRole = role;
+        const def = roleDefaults[role];
+
+        // Update header
+        const iconEl = document.getElementById('matrixRoleIcon');
+        iconEl.className = `w-8 h-8 rounded-lg ${def.bg} flex items-center justify-center`;
+        iconEl.innerHTML = def.icon;
+        document.getElementById('matrixRoleTitle').innerText = def.title;
+        document.getElementById('matrixRoleDesc').innerText = def.desc;
+
+        const allBoxes = document.querySelectorAll('#permissionGrid input[type="checkbox"]');
+
+        // Always fetch fresh from DB — never trust hardcoded defaults if DB has a saved state
+        try {
+            const res = await fetch(`${API_BASE_URL}/get_permission.php?role=${encodeURIComponent(role)}`);
+            const data = await res.json();
+
+            if (data.success && data.permissions) {
+                allBoxes.forEach(cb => {
+                    if (!cb.dataset.perm) return;
+                    cb.checked = data.permissions[cb.dataset.perm] === true;
+                });
+            } else {
+                allBoxes.forEach(cb => {
+                    const perm = cb.dataset.perm;
+                    if (!perm) return;
+                    cb.checked = def.all ? true : (def.perms || []).includes(perm);
+                });
+            }
+        } catch (err) {
+            allBoxes.forEach(cb => {
+                const perm = cb.dataset.perm;
+                if (!perm) return;
+                cb.checked = def.all ? true : (def.perms || []).includes(perm);
+            });
+        }
+
+        // Sync select-all toggle
+        const allChecked = [...allBoxes].every(cb => cb.checked);
+        document.getElementById('selectAllToggle').checked = allChecked;
+    }
+
+    function toggleAllPerms(checked) {
+        document.querySelectorAll('#permissionGrid input[data-perm]').forEach(cb => cb.checked = checked);
+    }
+
+    function toggleModule(module, btn) {
+        const rows = document.querySelectorAll(`[data-module="${module}"] input[type="checkbox"]`);
+        const allChecked = [...rows].every(cb => cb.checked);
+        rows.forEach(cb => cb.checked = !allChecked);
+        btn.textContent = allChecked ? 'Grant All' : 'Revoke All';
+    }
+
+    async function savePermissions() {
+        const perms = {};
+        document.querySelectorAll('#permissionGrid input[data-perm]').forEach(cb => { perms[cb.dataset.perm] = cb.checked; });
+
+        const role = currentMatrixRole;
+        console.log('Saving permissions for role:', role, perms);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/save_permissions.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role, permissions: perms })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message);
+
+            showToast(`✓ Permissions saved for ${roleDefaults[role].title}`);
+            renderAuditLog(); // Refresh audit log
+        } catch (err) {
+            showToast('✗ Failed to save permissions: ' + err.message, 'warn');
+        }
+    }
+
+    function toggleAuditDetails(row) {
+        const detailsRow = row.nextElementSibling;
+        if (detailsRow && detailsRow.classList.contains('audit-details-row')) {
+            detailsRow.classList.toggle('hidden');
+            row.classList.toggle('is-open');
+        }
+    }
+
+    function openNewRoleModal() { showToast('Custom role creation coming soon!'); }
+
+    // ===================== ROLE ASSIGNMENT — live from allUsers =====================
+
+    // In-memory role overrides (on top of the user's base role from DB)
+    // key: user_id, value: { role, assignedDate }
+    let roleAssignments = {};
+    let selectedAssignUser = null;
+
+    function getRoleStyle(role) {
+        const map = {
+            superadmin: { pill: 'role-pill-superadmin', icon: 'fa-crown',              bg: 'bg-violet-100', iconColor: 'text-violet-600' },
+            registrar:  { pill: 'role-pill-registrar',  icon: 'fa-file-invoice',       bg: 'bg-blue-100',   iconColor: 'text-blue-600'   },
+            faculty:    { pill: 'role-pill-faculty',     icon: 'fa-chalkboard-teacher', bg: 'bg-amber-100',  iconColor: 'text-amber-600'  },
+            admin:      { pill: 'role-pill-superadmin',  icon: 'fa-user-shield',        bg: 'bg-violet-100', iconColor: 'text-violet-600' },
+            cashier:    { pill: 'role-pill-cashier',     icon: 'fa-cash-register',      bg: 'bg-rose-100',   iconColor: 'text-rose-600'   },
+            librarian:  { pill: 'role-pill-librarian',   icon: 'fa-book',               bg: 'bg-emerald-100',iconColor: 'text-emerald-600'},
+            student:    { pill: 'role-pill-student',     icon: 'fa-user-graduate',      bg: 'bg-sky-100',    iconColor: 'text-sky-600'    },
+        };
+        return map[role] || { pill: 'role-pill-student', icon: 'fa-user', bg: 'bg-slate-100', iconColor: 'text-slate-500' };
+    }
+
+    function getEffectiveRole(user) {
+        return roleAssignments[user.user_id]?.role || user.role;
+    }
+
+    function stampUpdatedAt(userId) {
+        const now = new Date().toISOString();
+        const user = allUsers.find(u => u.user_id === userId);
+        if (!user) return;
+        user.updated_at = now;
+
+        // If the modal is open and showing this exact user, refresh the timestamp live
+        if (currentUser && currentUser.user_id === userId) {
+            const formatted = new Date(now).toLocaleString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: 'numeric', hour12: true
+            });
+            const el = document.getElementById('modalUpdatedAt');
+            if (el) {
+                el.innerText = formatted;
+                // Brief highlight flash so the user notices it changed
+                el.style.transition = 'color 0.3s';
+                el.style.color = '#2563eb';
+                setTimeout(() => { el.style.color = ''; }, 1500);
+            }
+        }
+    }
+
+    function filterAssignUsers() {
+        const val = document.getElementById('assignSearchInput').value.toLowerCase().trim();
+        const results = document.getElementById('assignSearchResults');
+
+        if (!allUsers.length) {
+            results.innerHTML = '<div class="px-4 py-3 text-xs text-slate-400 text-center">No users loaded yet</div>';
+            results.classList.remove('hidden');
+            return;
+        }
+
+        const filtered = val
+            ? allUsers.filter(u => {
+                const full = (u.first_name + ' ' + (u.middle_name||'') + ' ' + u.last_name).toLowerCase();
+                return full.includes(val) || u.institutional_email.toLowerCase().includes(val) || u.user_id.toLowerCase().includes(val);
+            })
+            : allUsers;
+
+        if (!filtered.length) {
+            results.innerHTML = '<div class="px-4 py-3 text-xs text-slate-400 text-center">No users found</div>';
+            results.classList.remove('hidden');
+            return;
+        }
+
+        const items = filtered.slice(0, 8).map(u => {
+            const full = u.first_name + (u.middle_name ? ' ' + u.middle_name : '') + ' ' + u.last_name;
+            const effRole = getEffectiveRole(u);
+            const s = getRoleStyle(effRole);
+            return `<div onclick="selectAssignUserObj('${u.user_id}')" class="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0">
+                <div class="w-7 h-7 ${s.bg} rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas ${s.icon} ${s.iconColor} text-xs"></i></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 truncate">${full}</p>
+                    <p class="text-[10px] text-slate-400 truncate">${u.institutional_email}</p>
+                </div>
+                <span class="role-pill ${s.pill} text-[9px] flex-shrink-0">${effRole}</span>
+            </div>`;
+        }).join('');
+
+        results.innerHTML = items + (filtered.length > 8 ? `<div class="px-4 py-2 text-[10px] text-slate-400 text-center bg-slate-50">${filtered.length - 8} more — type to narrow results</div>` : '');
+        results.classList.remove('hidden');
+    }
+
+    function selectAssignUserObj(userId) {
+        const user = allUsers.find(u => u.user_id === userId);
+        if (!user) return;
+        selectedAssignUser = user;
+
+        const full = user.first_name + (user.middle_name ? ' ' + user.middle_name : '') + ' ' + user.last_name;
+        const effRole = getEffectiveRole(user);
+        const s = getRoleStyle(effRole);
+
+        document.getElementById('assignSearchInput').value = full;
+        document.getElementById('assignSearchResults').classList.add('hidden');
+        document.getElementById('selectedUserCard').classList.remove('hidden');
+        document.getElementById('assignUserName').innerText = full;
+        document.getElementById('assignUserEmail').innerText = user.institutional_email;
+        document.getElementById('assignUserCurrentRole').innerText = effRole.charAt(0).toUpperCase() + effRole.slice(1);
+
+        const iconEl = document.getElementById('assignUserIcon');
+        iconEl.className = `w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center`;
+        iconEl.innerHTML = `<i class="fas ${s.icon} ${s.iconColor}"></i>`;
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const input = document.getElementById('assignSearchInput');
+        const results = document.getElementById('assignSearchResults');
+        if (input && results && !input.contains(e.target) && !results.contains(e.target)) {
+            results.classList.add('hidden');
+        }
+    });
+
+    async function submitRoleAssignment() {
+        if (!selectedAssignUser) { showToast('⚠ Please select a user first.', 'warn'); return; }
+        const newRole = document.getElementById('assignRoleSelect').value;
+        if (!newRole) { showToast('⚠ Please choose a role.', 'warn'); return; }
+
+        const full    = selectedAssignUser.first_name + (selectedAssignUser.middle_name ? ' ' + selectedAssignUser.middle_name : '') + ' ' + selectedAssignUser.last_name;
+        const oldRole = getEffectiveRole(selectedAssignUser);
+        const reason  = document.getElementById('assignReason').value.trim();
+        const userId  = selectedAssignUser.user_id;
+
+        if (oldRole === newRole) { showToast('⚠ User already has that role.', 'warn'); return; }
+
+        const btn = document.querySelector('button[onclick="submitRoleAssignment()"]');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...'; }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/update_role.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newRole, reason })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message);
+
+            // Update in-memory user so UI reflects the new ID and role immediately
+            const userInMemory = allUsers.find(u => u.user_id === userId);
+            if (userInMemory) {
+                userInMemory.user_id    = result.data.newUserId;
+                userInMemory.role       = newRole;
+                userInMemory.updated_at = new Date().toISOString();
+            }
+
+            // Track who assigned this, when, and what the previous role was (for Revoke)
+            roleAssignments[result.data.newUserId] = {
+                role:         newRole,
+                previousRole: oldRole,
+                previousId:   userId,
+                assignedDate: new Date().toISOString().slice(0, 10),
+                assignedBy:   'admin@bcp.edu.ph'
+            };
+
+            stampUpdatedAt(userId);
+            renderAuditLog();
+                displayUsers(allUsers);
+            renderAssignmentTable();
+
+            document.getElementById('assignSearchInput').value = '';
+            document.getElementById('assignRoleSelect').value = '';
+            document.getElementById('assignReason').value = '';
+            document.getElementById('selectedUserCard').classList.add('hidden');
+            selectedAssignUser = null;
+
+            showToast(`✓ ${full} is now ${newRole} — saved to database`);
+        } catch (err) {
+            showToast('✗ Failed: ' + err.message, 'warn');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Role Assignment'; }
+        }
+    }
+
+    async function revokeRole(btn, userId) {
+        const user = allUsers.find(u => u.user_id === userId);
+        if (!user) return;
+
+        const full        = user.first_name + (user.middle_name ? ' ' + user.middle_name : '') + ' ' + user.last_name;
+        const currentRole = getEffectiveRole(user);
+
+        // Build a role picker prompt using a custom confirm-style modal
+        const roles = ['student','faculty','admin','superadmin','registrar','cashier','librarian'];
+        const otherRoles = roles.filter(r => r !== currentRole);
+
+        const newRole = await showRolePickerModal(full, currentRole, otherRoles);
+        if (!newRole) return; // user cancelled
+
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/update_role.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newRole, reason: 'Role changed via Revoke/Reassign' })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message);
+
+            // Update in-memory
+            const userInMemory = allUsers.find(u => u.user_id === userId);
+            if (userInMemory) {
+                userInMemory.user_id    = result.data.newUserId;
+                userInMemory.role       = newRole;
+                userInMemory.updated_at = new Date().toISOString();
+            }
+            roleAssignments[result.data.newUserId] = {
+                role:         newRole,
+                previousRole: currentRole,
+                previousId:   userId,
+                assignedDate: new Date().toISOString().slice(0, 10),
+                assignedBy:   'admin@bcp.edu.ph'
+            };
+                displayUsers(allUsers);
+            renderAssignmentTable();
+            showToast(`✓ ${full} changed from ${currentRole} → ${newRole}`);
+        } catch (err) {
+            showToast('✗ Failed: ' + err.message, 'warn');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Reassign';
+        }
+    }
+
+    // Revoke = undo the last role change, revert to previous role
+    async function revokeToStudent(btn, userId) {
+        const user = allUsers.find(u => u.user_id === userId);
+        if (!user) return;
+
+        const override = roleAssignments[userId];
+        if (!override || !override.previousRole) {
+            showToast('ℹ No recent change to revoke.', 'warn');
+            return;
+        }
+
+        const full         = user.first_name + (user.middle_name ? ' ' + user.middle_name : '') + ' ' + user.last_name;
+        const currentRole  = getEffectiveRole(user);
+        const previousRole = override.previousRole;
+
+        if (!confirm(`⚠️ REVOKE ROLE CHANGE\n\nRevert ${full} from "${currentRole}" back to "${previousRole}"?`)) return;
+
+        btn.disabled = true;
+        btn.innerText = 'Reverting...';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/update_role.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newRole: previousRole, reason: `Revoked — reverted from ${currentRole} back to ${previousRole}` })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message);
+
+            const userInMemory = allUsers.find(u => u.user_id === userId);
+            if (userInMemory) {
+                userInMemory.user_id    = result.data.newUserId;
+                userInMemory.role       = previousRole;
+                userInMemory.updated_at = new Date().toISOString();
+            }
+
+            // Clear the override — role is back to what it was
+            delete roleAssignments[userId];
+
+            stampUpdatedAt(userId);
+            renderAuditLog();
+                displayUsers(allUsers);
+            renderAssignmentTable();
+            showToast(`✓ Revoked — ${full} is back to ${previousRole}`);
+        } catch (err) {
+            showToast('✗ Failed: ' + err.message, 'warn');
+            btn.disabled = false;
+            btn.innerText = 'Revoke';
+        }
+    }
+
+    // Simple inline modal for picking a new role when reassigning
+    function showRolePickerModal(fullName, currentRole, otherRoles) {
+        return new Promise(resolve => {
+            // Remove any existing picker
+            const existing = document.getElementById('rolePickerOverlay');
+            if (existing) existing.remove();
+
+            const roleLabels = {
+                student: 'Student', faculty: 'Faculty', admin: 'Admin',
+                superadmin: 'Super Admin', registrar: 'Registrar',
+                cashier: 'Cashier', librarian: 'Librarian'
+            };
+            const options = otherRoles.map(r =>
+                `<option value="${r}">${roleLabels[r] || r}</option>`
+            ).join('');
+
+            const overlay = document.createElement('div');
+            overlay.id = 'rolePickerOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            overlay.innerHTML = `
+                <div style="background:white;border-radius:1.5rem;padding:2rem;width:100%;max-width:400px;box-shadow:0 25px 50px rgba(0,0,0,0.2);">
+                    <h3 style="font-size:1rem;font-weight:900;color:#1e293b;margin-bottom:0.25rem;">Reassign Role</h3>
+                    <p style="font-size:0.75rem;color:#64748b;margin-bottom:1.5rem;">
+                        <strong>${fullName}</strong> is currently <strong>${currentRole}</strong>. Select a new role:
+                    </p>
+                    <select id="rolePickerSelect" style="width:100%;padding:0.75rem 1rem;border:1.5px solid #e2e8f0;border-radius:0.75rem;font-size:0.875rem;font-weight:700;background:white;margin-bottom:1rem;outline:none;">
+                        <option value="">Choose new role...</option>
+                        ${options}
+                    </select>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button id="rolePickerCancel" style="flex:1;padding:0.75rem;border:1.5px solid #e2e8f0;border-radius:0.75rem;font-size:0.8rem;font-weight:700;color:#64748b;background:white;cursor:pointer;">Cancel</button>
+                        <button id="rolePickerConfirm" style="flex:1;padding:0.75rem;background:#1e3a8a;color:white;border:none;border-radius:0.75rem;font-size:0.8rem;font-weight:900;cursor:pointer;">Confirm</button>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(overlay);
+
+            document.getElementById('rolePickerCancel').onclick = () => { overlay.remove(); resolve(null); };
+            document.getElementById('rolePickerConfirm').onclick = () => {
+                const val = document.getElementById('rolePickerSelect').value;
+                if (!val) { document.getElementById('rolePickerSelect').style.borderColor = '#ef4444'; return; }
+                overlay.remove();
+                resolve(val);
+            };
+            overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+        });
+    }
+
+    function renderAssignmentTable(filterVal = '') {
+        const tbody = document.getElementById('assignmentTableBody');
+        if (!allUsers.length) return;
+
+        // Show all users, with role overrides applied
+        let users = allUsers.filter(u => {
+            if (!filterVal) return true;
+            const full = (u.first_name + ' ' + (u.middle_name||'') + ' ' + u.last_name).toLowerCase();
+            const effRole = getEffectiveRole(u).toLowerCase();
+            return full.includes(filterVal) || effRole.includes(filterVal) || u.institutional_email.toLowerCase().includes(filterVal);
+        });
+
+        document.getElementById('assignmentCount').innerText = users.length;
+
+        if (!users.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-xs text-slate-400">No users match your filter</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+            const full = u.first_name + (u.middle_name ? ' ' + u.middle_name : '') + ' ' + u.last_name;
+            const effRole    = getEffectiveRole(u);
+            const s          = getRoleStyle(effRole);
+            const override   = roleAssignments[u.user_id];
+
+            // Date: use override date if exists, else updated_at (most recent role change), else created_at
+            const dateSource = override?.assignedDate
+                || (u.updated_at ? u.updated_at.slice(0,10) : null)
+                || u.created_at?.slice(0,10)
+                || '—';
+
+            // Granted by: use override info if exists, else show "System (on creation)"
+            const grantedBy  = override?.assignedBy || 'System';
+
+            return `<tr class="hover:bg-slate-50 transition">
+                <td class="px-5 py-3.5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 ${s.bg} rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${s.icon} ${s.iconColor} text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-800">${full}</p>
+                            <p class="text-[10px] text-slate-400">${u.institutional_email}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-5 py-3.5">
+                    <span class="role-pill ${s.pill}"><i class="fas ${s.icon} text-[9px]"></i> ${effRole}</span>
+                </td>
+                <td class="px-5 py-3.5 text-xs text-slate-500">${grantedBy}</td>
+                <td class="px-5 py-3.5 text-xs font-mono text-slate-400">${dateSource}</td>
+                <td class="px-5 py-3.5 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="revokeRole(this,'${u.user_id}')" class="text-xs font-bold text-blue-500 hover:text-blue-700 transition px-2 py-1 rounded hover:bg-blue-50">
+                            Reassign
+                        </button>
+                        <span class="text-slate-200">|</span>
+                        <button onclick="revokeToStudent(this,'${u.user_id}')" class="text-xs font-bold transition px-2 py-1 rounded ${override ? 'text-red-400 hover:text-red-600 hover:bg-red-50 cursor-pointer' : 'text-slate-300 cursor-not-allowed'}" ${override ? '' : 'disabled'}>
+                            Revoke
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function filterAssignmentTable() {
+        const val = document.getElementById('assignmentFilterInput').value.toLowerCase();
+        renderAssignmentTable(val);
+    }
+
+    // ===================== AUDIT LOG =====================
+    let auditFilter = 'All Events';
+
+    async function renderAuditLog(filter = auditFilter) {
+        auditFilter = filter; // Keep track of current filter
+        const tbody = document.getElementById('auditTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading logs...</td></tr>';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/get_audit_log.php?filter=${encodeURIComponent(auditFilter)}`);
+            const data = await response.json();
+            if (!data.success) throw new Error(data.message);
+
+            const entries = data.logs;
+
+            if (!entries || entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400">No entries match this filter</td></tr>';
+                return;
+            }
+
+            const statusMap = {
+                'Success': { badge: 'success', label: 'Success' },
+                'Saved': { badge: 'success', label: 'Saved' },
+                'Revoked': { badge: 'warning', 'label': 'Revoked' },
+                'Blocked': { badge: 'blocked', 'label': 'Blocked' },
+                'Failed': { badge: 'blocked', 'label': 'Failed' },
+            };
+
+            tbody.innerHTML = entries.map((e, index) => {
+                const rs = getRoleStyle(e.byRole || 'admin'); // Default style
+                const statusInfo = statusMap[e.status] ?? { badge: 'warning', label: e.status };
+                const badgeCls = statusInfo.badge === 'success' ? 'audit-badge-success' : statusInfo.badge === 'blocked' ? 'audit-badge-blocked' : 'audit-badge-warning';
+
+                let detailsContent = '';
+                let isExpandable = false;
+                let summary = e.detail;
+
+                if (e.event === 'Permissions Changed' && (e.detail.includes('Granted:') || e.detail.includes('Revoked:'))) {
+                    const changes = [];
+                    const parts = e.detail.split('. ').filter(p => p.trim() && p !== "No changes were made.");
+
+                    parts.forEach(part => {
+                        if (part.startsWith('Granted:')) {
+                            const perms = part.replace('Granted: ', '').split(', ');
+                            perms.forEach(p => changes.push({ type: 'granted', perm: p.replace(/'/g, '') }));
+                        } else if (part.startsWith('Revoked:')) {
+                            const perms = part.replace('Revoked: ', '').split(', ');
+                            perms.forEach(p => changes.push({ type: 'revoked', perm: p.replace(/'/g, '') }));
+                        }
+                    });
+
+                    if (changes.length > 0) {
+                        isExpandable = true;
+                        summary = `${changes.length} permission(s) changed. Click to view details.`;
+                        detailsContent = `
+                            <ul class="space-y-1.5 text-xs font-mono text-slate-600">
+                                ${changes.map(c => {
+                                    const isGranted = c.type === 'granted';
+                                    const prefix = isGranted ? '+' : '-';
+                                    const color = isGranted ? 'text-green-600' : 'text-red-600';
+                                    const statusText = isGranted ? 'allowed' : 'denied';
+                                    return `
+                                        <li>
+                                            <span class="font-bold ${color}">${prefix}</span> set <code class="bg-slate-200 text-slate-700 px-1 py-0.5 rounded">${c.perm}</code> to <span class="font-bold ${color}">${statusText}</span>
+                                        </li>
+                                    `;
+                                }).join('')}
+                            </ul>`;
+                    }
+                }
+
+                const mainRow = `<tr class="hover:bg-slate-50 transition ${isExpandable ? 'cursor-pointer' : ''}" ${isExpandable ? `onclick="toggleAuditDetails(this)"` : ''}>
+                    <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            ${isExpandable ? '<i class="fas fa-chevron-right audit-toggle-icon"></i>' : '<i class="fas fa-circle text-[5px] text-slate-300 mx-1"></i>'}
+                            <span>${e.ts}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 ${rs.bg} rounded flex items-center justify-center"><i class="fas ${rs.icon} ${rs.iconColor} text-[9px]"></i></div>
+                            <div><p class="text-xs font-bold text-slate-800">${e.by}</p><span class="role-pill ${rs.pill} text-[9px]">${e.byRole}</span></div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">${e.event}</p><p class="text-[10px] text-slate-400">${summary}</p></td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${e.affected}</td>
+                    <td class="px-6 py-4 text-center"><span class="${badgeCls} px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">${statusInfo.label}</span></td>
+                </tr>`;
+
+                const detailsRow = isExpandable ? `
+                    <tr class="audit-details-row hidden bg-slate-50">
+                        <td></td>
+                        <td colspan="4" class="p-0">
+                            <div class="px-6 py-4 border-l-4 border-slate-200">
+                                ${detailsContent}
+                            </div>
+                        </td>
+                    </tr>
+                ` : '';
+
+                return mainRow + detailsRow;
+
+            }).join('');
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-400">Error loading logs: ${error.message}</td></tr>`;
+        }
+    }
+
+    // OLD RENDER FUNCTION - REPLACED
+    /* function renderAuditLog(filter) {
+        if (filter !== undefined) auditFilter = filter;
+        const tbody = document.getElementById('auditTableBody');
+        if (!tbody) return;
+
+        let entries = auditLog;
+        if (auditFilter === 'Role Changes')       entries = auditLog.filter(e => e.event.includes('Role'));
+        if (auditFilter === 'Permission Changes') entries = auditLog.filter(e => e.event.includes('Perm') || e.event.includes('Permission'));
+        if (auditFilter === 'User Creation')      entries = auditLog.filter(e => e.event.includes('Created') || e.event.includes('Creation'));
+        if (auditFilter === 'User Deletion')      entries = auditLog.filter(e => e.event.includes('Deleted') || e.event.includes('Deletion'));
+        if (auditFilter === 'Failed Access')      entries = auditLog.filter(e => e.badge === 'blocked');
+
+        const s = getRoleStyle('superadmin'); // used for admin icon
+        tbody.innerHTML = entries.map(e => {
+            const rs = getRoleStyle(e.byRole);
+            const badgeCls = e.badge === 'success' ? 'audit-badge-success' : e.badge === 'blocked' ? 'audit-badge-blocked' : 'audit-badge-warning';
+            return `<tr class="hover:bg-slate-50 transition">
+                <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">${e.ts}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 ${rs.bg} rounded flex items-center justify-center"><i class="fas ${rs.icon} ${rs.iconColor} text-[9px]"></i></div>
+                        <div><p class="text-xs font-bold text-slate-800">${e.by}</p><span class="role-pill ${rs.pill} text-[9px]">${e.byRole}</span></div>
+                    </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-xs font-bold text-slate-700">${e.event}</p><p class="text-[10px] text-slate-400">${e.detail}</p></td>
+                <td class="px-6 py-4 text-xs text-slate-500">${e.affected}</td>
+                <td class="px-6 py-4 text-center"><span class="${badgeCls} px-2.5 py-1 rounded-lg text-[9px] font-black uppercase">${e.label}</span></td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400">No entries match this filter</td></tr>';
+    } */
+
+    // ===================== TOAST HELPER =====================
+    function showToast(msg, type = 'success') {
+        const t = document.createElement('div');
+        t.className = `fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-bold shadow-xl transition-all ${type === 'warn' ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white'}`;
+        t.innerText = msg;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2500);
+    }
+
+    // ===================== USERS TABLE LOGIC =====================
+    async function loadUsers() {
+        const role = document.getElementById('roleFilter').value;
+        const search = document.getElementById('searchInput').value;
+
+        try {
+            document.getElementById('usersTableBody').innerHTML = `
+                <tr>
+                    <td colspan="9" class="px-6 py-12 text-center">
+                        <i class="fas fa-spinner fa-spin text-4xl text-slate-300 mb-3"></i>
+                        <p class="text-slate-400 font-medium">Loading users...</p>
+                    </td>
+                </tr>
+            `;
+
+            let url = `${API_BASE_URL}/get_users.php?role=${role}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success) {
+                allUsers = data.users;
+                        displayUsers(data.users);
+                renderAssignmentTable();
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            document.getElementById('usersTableBody').innerHTML = `
+                <tr>
+                    <td colspan="9" class="px-6 py-12 text-center">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-300 mb-3"></i>
+                        <p class="text-red-400 font-medium">Error: ${error.message}</p>
+                        <p class="text-slate-400 text-sm mt-1">Make sure XAMPP is running and this project folder is in htdocs/bcp-enrollment-login/.</p>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // ===================== STATS CARDS =====================
+    const roleCardConfig = {
+        // Row 1: student=blue, faculty=amber, admin=pink, superadmin=violet
+        student:    { label: 'Students',    icon: 'fa-user-graduate',      labelColor: 'text-blue-400',    countColor: 'text-blue-600',    bg: 'bg-blue-100',    iconColor: 'text-blue-600'    },
+        faculty:    { label: 'Faculty',     icon: 'fa-chalkboard-teacher', labelColor: 'text-amber-400',   countColor: 'text-amber-600',   bg: 'bg-amber-100',   iconColor: 'text-amber-600'   },
+        admin:      { label: 'Admin',       icon: 'fa-user-shield',        labelColor: 'text-pink-400',    countColor: 'text-pink-600',    bg: 'bg-pink-100',    iconColor: 'text-pink-600'    },
+        superadmin: { label: 'Super Admin', icon: 'fa-crown',              labelColor: 'text-violet-400',  countColor: 'text-violet-600',  bg: 'bg-violet-100',  iconColor: 'text-violet-600'  },
+        // Row 2: registrar=blue(indigo), cashier=rose, librarian=emerald — matches RBAC pills
+        registrar:  { label: 'Registrar',   icon: 'fa-file-invoice',       labelColor: 'text-indigo-400',  countColor: 'text-indigo-600',  bg: 'bg-indigo-100',  iconColor: 'text-indigo-600'  },
+        cashier:    { label: 'Cashier',     icon: 'fa-cash-register',      labelColor: 'text-rose-400',    countColor: 'text-rose-600',    bg: 'bg-rose-100',    iconColor: 'text-rose-600'    },
+        librarian:  { label: 'Librarian',   icon: 'fa-book',               labelColor: 'text-emerald-400', countColor: 'text-emerald-600', bg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+    };
+
+    function displayUsers(users) {
+        const tbody = document.getElementById('usersTableBody');
+
+        if (users.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="px-6 py-12 text-center">
+                        <i class="fas fa-users-slash text-4xl text-slate-300 mb-3"></i>
+                        <p class="text-slate-400 font-medium">No users found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = users.map(user => {
+            const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + ' ' : ''}${user.last_name}`;
+            const effRole = getEffectiveRole(user);
+            const roleBadgeMap = { student: 'badge-student', faculty: 'badge-faculty', admin: 'badge-admin', superadmin: 'badge-superadmin', registrar: 'badge-registrar', cashier: 'badge-cashier', librarian: 'badge-librarian' };
+            const roleBadge = roleBadgeMap[effRole] || 'badge-admin';
+            const enrolledDate = new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const isOverridden = !!roleAssignments[user.user_id];
+
+            return `
+                <tr class="table-row">
+                    <td class="px-6 py-4">
+                        <span class="font-mono text-sm font-bold text-slate-700">${user.user_id}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-bold text-slate-800">${fullName}</p>
+                        <p class="text-xs text-slate-400">${user.gender || 'N/A'}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="badge ${roleBadge}">${effRole}</span>
+                        ${isOverridden ? '<span class="ml-1 text-[9px] font-bold text-amber-500 uppercase tracking-wide">override</span>' : ''}
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium text-slate-700">${user.institutional_email}</p>
+                        <p class="text-xs text-slate-400">${user.personal_email || 'N/A'}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm text-slate-600">${user.mobile_number || 'N/A'}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button onclick="viewUserFiles('${user.user_id}')" class="text-blue-600 hover:text-blue-800 font-bold text-sm flex items-center gap-2">
+                            <i class="fas fa-file"></i>
+                            <span id="file-count-${user.user_id}">0</span>
+                        </button>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm text-slate-600">${enrolledDate}</p>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="viewUser('${user.user_id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick='deleteUser("${user.user_id}", "${fullName.replace(/"/g, '&quot;')}")' class="text-red-600 hover:text-red-800 mx-1" title="Delete User">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function filterUsers() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const roleFilter = document.getElementById('roleFilter').value;
+
+        let filtered = allUsers;
+        if (roleFilter !== 'all') filtered = filtered.filter(u => getEffectiveRole(u) === roleFilter);
+        if (searchTerm) {
+            filtered = filtered.filter(u => {
+                const full = `${u.first_name} ${u.middle_name || ''} ${u.last_name}`.toLowerCase();
+                return full.includes(searchTerm) || u.user_id.toLowerCase().includes(searchTerm) || u.institutional_email.toLowerCase().includes(searchTerm);
+            });
+        }
+        displayUsers(filtered);
+    }
+
+    function viewUser(userId) {
+        const user = allUsers.find(u => u.user_id === userId);
+        if (!user) return;
+        currentUser = user;
+
+        const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + ' ' : ''}${user.last_name}`;
+        const effRole = getEffectiveRole(user);
+        document.getElementById('modalFullName').innerText = fullName;
+        document.getElementById('modalUserId').innerText = `ID: ${user.user_id}`;
+        document.getElementById('modalRoleBadge').innerText = effRole.toUpperCase();
+
+        const photoIcon = document.getElementById('modalPhotoIcon');
+        if (effRole === 'student') photoIcon.className = 'fas fa-user-graduate text-5xl text-blue-600';
+        else if (effRole === 'faculty') photoIcon.className = 'fas fa-chalkboard-teacher text-5xl text-amber-600';
+        else if (effRole === 'superadmin') photoIcon.className = 'fas fa-crown text-5xl text-violet-600';
+        else if (effRole === 'cashier') photoIcon.className = 'fas fa-cash-register text-5xl text-rose-500';
+        else if (effRole === 'librarian') photoIcon.className = 'fas fa-book text-5xl text-emerald-600';
+        else photoIcon.className = 'fas fa-user-shield text-5xl text-pink-600';
+
+        document.getElementById('modalInstitutionalEmail').innerText = user.institutional_email || 'N/A';
+        document.getElementById('modalPersonalEmail').innerText = user.personal_email || 'N/A';
+        document.getElementById('modalMobileNumber').innerText = user.mobile_number || 'N/A';
+        document.getElementById('modalBirthDate').innerText = user.birth_date ? new Date(user.birth_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
+        document.getElementById('modalGender').innerText = user.gender || 'N/A';
+
+        if (effRole === 'student' && user.lrn) {
+            document.getElementById('modalLrnRow').style.display = 'flex';
+            document.getElementById('modalLrn').innerText = user.lrn;
+            document.getElementById('modalEmployeeIdRow').style.display = 'none';
+        } else if ((effRole === 'faculty' || effRole === 'admin' || effRole === 'superadmin' || effRole === 'registrar' || effRole === 'cashier' || effRole === 'librarian') && user.employee_id) {
+            document.getElementById('modalEmployeeIdRow').style.display = 'flex';
+            document.getElementById('modalEmployeeId').innerText = user.employee_id;
+            document.getElementById('modalLrnRow').style.display = 'none';
+        } else {
+            document.getElementById('modalLrnRow').style.display = 'none';
+            document.getElementById('modalEmployeeIdRow').style.display = 'none';
+        }
+
+        ['modalMajorRow','modalStatusRow','modalSpecializationRow','modalEmploymentTypeRow','modalAccessLevelRow'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+
+        if (effRole === 'student') {
+            document.getElementById('modalAcademicTitle').innerHTML = '<i class="fas fa-graduation-cap"></i> Academic Information';
+            document.getElementById('modalProgramLabel').innerText = 'Program';
+            document.getElementById('modalProgram').innerText = user.department_program || 'N/A';
+            document.getElementById('modalYearRow').style.display = 'flex';
+            document.getElementById('modalYearLabel').innerText = 'Year Level';
+            document.getElementById('modalYear').innerText = user.year_position || 'N/A';
+            if (user.major) { document.getElementById('modalMajorRow').style.display = 'flex'; document.getElementById('modalMajor').innerText = user.major; }
+            if (user.enrollment_status) { document.getElementById('modalStatusRow').style.display = 'flex'; document.getElementById('modalStatus').innerText = user.enrollment_status; }
+            document.getElementById('modalGuardianSection').style.display = 'block';
+            document.getElementById('modalGuardianName').innerText = user.guardian_name || 'N/A';
+            document.getElementById('modalGuardianContact').innerText = user.guardian_contact || 'N/A';
+            document.getElementById('modalGuardianRelationship').innerText = user.guardian_relationship || 'N/A';
+        } else if (effRole === 'faculty') {
+            document.getElementById('modalAcademicTitle').innerHTML = '<i class="fas fa-briefcase"></i> Employment Information';
+            document.getElementById('modalProgramLabel').innerText = 'Department';
+            document.getElementById('modalProgram').innerText = user.department_program || 'N/A';
+            document.getElementById('modalYearRow').style.display = 'flex';
+            document.getElementById('modalYearLabel').innerText = 'Position';
+            document.getElementById('modalYear').innerText = user.year_position || 'N/A';
+            if (user.specialization) { document.getElementById('modalSpecializationRow').style.display = 'flex'; document.getElementById('modalSpecialization').innerText = user.specialization; }
+            if (user.employment_type) { document.getElementById('modalEmploymentTypeRow').style.display = 'flex'; document.getElementById('modalEmploymentType').innerText = user.employment_type; }
+            document.getElementById('modalGuardianSection').style.display = 'none';
+        } else {
+            document.getElementById('modalAcademicTitle').innerHTML = '<i class="fas fa-briefcase"></i> Employment Information';
+            document.getElementById('modalProgramLabel').innerText = 'Department';
+            document.getElementById('modalProgram').innerText = user.department_program || 'N/A';
+            document.getElementById('modalYearRow').style.display = 'flex';
+            document.getElementById('modalYearLabel').innerText = 'Position';
+            document.getElementById('modalYear').innerText = user.year_position || 'N/A';
+            if (user.access_level) { document.getElementById('modalAccessLevelRow').style.display = 'flex'; document.getElementById('modalAccessLevel').innerText = user.access_level; }
+            document.getElementById('modalGuardianSection').style.display = 'none';
+        }
+
+        document.getElementById('modalStreetAddress').innerText = user.street_address || 'N/A';
+        document.getElementById('modalBarangay').innerText = user.barangay || 'N/A';
+        document.getElementById('modalCity').innerText = user.city || 'N/A';
+        document.getElementById('modalProvince').innerText = user.province || 'N/A';
+        document.getElementById('modalZipCode').innerText = user.zip_code || 'N/A';
+        document.getElementById('modalCreatedAt').innerText = new Date(user.created_at).toLocaleString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+        });
+        document.getElementById('modalUpdatedAt').innerText = user.updated_at ? new Date(user.updated_at).toLocaleString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+        }) : 'N/A';
+
+        openModal();
+    }
+
+    function openModal() {
+        document.getElementById('userModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+        currentUser = null;
+    }
+
+    function closeModalOnBackdrop(event) {
+        if (event.target.id === 'userModal') closeModal();
+    }
+
+    async function deleteUser(userId, fullName) {
+        if (!confirm(`⚠️ DELETE USER\n\nAre you sure you want to delete:\n${fullName} (${userId})?\n\nThis action cannot be undone!`)) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/delete_user.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId }),
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('✓ User deleted successfully!');
+                loadUsers();
+                renderAuditLog(); // Refresh audit log
+            }
+            else showToast('✗ Error: ' + result.message, 'warn');
+        } catch (error) {
+            showToast('✗ Connection Error: ' + error.message, 'warn');
+        }
+    }
+
+    function deleteUserFromModal() {
+        if (!currentUser) return;
+        const fullName = `${currentUser.first_name} ${currentUser.middle_name ? currentUser.middle_name + ' ' : ''}${currentUser.last_name}`;
+        closeModal();
+        deleteUser(currentUser.user_id, fullName);
+    }
+
+    // ===================== FILE MANAGEMENT =====================
+    async function viewUserFiles(userId) {
+        const modal = document.getElementById('filesModal');
+        if (!modal) {
+            const filesModal = document.createElement('div');
+            filesModal.id = 'filesModal';
+            filesModal.className = 'modal';
+            filesModal.onclick = e => { if (e.target.id === 'filesModal') closeFilesModal(); };
+            filesModal.innerHTML = `
+                <div class="modal-content bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 rounded-t-3xl flex items-center justify-between">
+                        <h2 class="text-2xl font-black text-white">Uploaded Files</h2>
+                        <button onclick="closeFilesModal()" class="text-white hover:text-gray-200 transition text-2xl">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-8">
+                        <div id="filesContainer" class="space-y-3"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(filesModal);
+        }
+
+        const container = document.getElementById('filesContainer');
+        container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-4xl text-blue-400 mb-3"></i><p class="text-slate-400">Loading files...</p></div>';
+        document.getElementById('filesModal').classList.add('active');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/get_user_files.php?user_id=${encodeURIComponent(userId)}`);
+            const data = await response.json();
+
+            const countEl = document.getElementById(`file-count-${userId}`);
+            if (countEl) countEl.textContent = data.count || '0';
+
+            if (data.success && data.files.length > 0) {
+                container.innerHTML = data.files.map(file => `
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition">
+                        <div class="flex items-center gap-3 flex-grow min-w-0">
+                            <i class="fas fa-file text-blue-500 text-xl flex-shrink-0"></i>
+                            <div class="flex-grow min-w-0">
+                                <p class="font-semibold text-slate-800 truncate text-sm">${file.original_name}</p>
+                                <p class="text-xs text-slate-500">${file.file_size_human} • ${new Date(file.uploaded_at).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <a href="${API_BASE_URL}/download_file.php?id=${file.id}" class="px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition flex items-center gap-1">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                            <button onclick="deleteFile(${file.id}, '${userId}')" class="px-3 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="text-center py-8"><i class="fas fa-file-circle-xmark text-4xl text-slate-300 mb-3 block"></i><p class="text-slate-400">No files uploaded</p></div>';
+            }
+        } catch (error) {
+            container.innerHTML = `<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-circle text-4xl mb-3 block"></i><p>${error.message}</p></div>`;
+        }
+    }
+
+    function closeFilesModal() {
+        const modal = document.getElementById('filesModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    async function deleteFile(fileId, userId) {
+        if (!confirm('Are you sure you want to delete this file?')) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/delete_file.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: fileId }),
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('✓ File deleted');
+                viewUserFiles(userId); // Refresh
+            } else {
+                showToast('✗ Error: ' + result.message, 'warn');
+            }
+        } catch (error) {
+            showToast('✗ Error: ' + error.message, 'warn');
+        }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFilesModal(); });
+
+    // Auto-load users on page ready
+    window.addEventListener('load', () => {
+        loadUsers();
+        renderAuditLog();
+        const defaultCard = document.querySelector('.role-card.active');
+        if (defaultCard) selectRoleMatrix('superadmin', defaultCard);
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCP SIEMS | Role & Permission Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .glass-input { background: #ffffff; border: 1px solid #e2e8f0; transition: all 0.2s; }
+        .glass-input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.1); outline: none; }
+        
+        /* Tab Button States */
+        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); color: #94a3b8; font-weight: 700; }
+        .tab-btn.active { background-color: #1e3a8a; color: white !important; box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.2); }
+        
+        /* Role Button States */
+        .role-btn.active { background-color: #1e3a8a; color: white !important; border-color: #1e3a8a; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4); transform: translateY(-2px); }
+        .role-btn.active i { color: white !important; }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        
+        .permission-card { transition: all 0.2s; border: 1px solid #f1f5f9; background-color: #fcfdfe; }
+        .permission-card:hover { border-color: #cbd5e1; background-color: white; transform: scale(1.01); }
+        
+        .search-results { max-height: 200px; overflow-y: auto; z-index: 50; }
+        .search-results div:hover { background-color: #f1f5f9; cursor: pointer; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden flex flex-col" style="height: 88vh;">
+        
+        <header class="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-50">
+            <div class="flex items-center gap-4">
+                <img src="../../../assets/img/images.png" alt="BCP" class="h-12 w-12 object-contain">
+                <div>
+                    <h1 class="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Access Control Management</h1>
+                    <p class="text-blue-600 text-[9px] font-black uppercase tracking-[0.3em]">Module 2: Security & Roles</p>
+                </div>
+            </div>
+
+            <div class="flex bg-slate-100 p-1.5 rounded-2xl">
+                <button onclick="switchMode('settings', this)" class="tab-btn active px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest">Rights Matrix</button>
+                <button onclick="switchMode('assignment', this)" class="tab-btn px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest">Assignments</button>
+                <button onclick="switchMode('audit', this)" class="tab-btn px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest"><i class="fas fa-history mr-1"></i> Audit Trail</button>
+            </div>
+        </header>
+
+        <div class="p-10 overflow-y-auto flex-grow bg-slate-50/30">
+
+            <div id="settingsView" class="view-section active space-y-10">
+                <div class="space-y-4">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Select Role to Modify</p>
+                    <div class="flex justify-center gap-6">
+                        <button onclick="selectRole('admin', this)" class="role-btn active group px-12 py-5 border-2 border-slate-100 rounded-[2rem] transition-all flex flex-col items-center gap-2 bg-white">
+                            <i class="fa-solid fa-shield-halved text-2xl text-blue-900"></i>
+                            <span class="text-[11px] font-black uppercase tracking-widest">Administrator</span>
+                        </button>
+                        <button onclick="selectRole('registrar', this)" class="role-btn group px-12 py-5 border-2 border-slate-100 rounded-[2rem] transition-all flex flex-col items-center gap-2 bg-white">
+                            <i class="fa-solid fa-file-invoice text-2xl text-blue-900"></i>
+                            <span class="text-[11px] font-black uppercase tracking-widest">Registrar</span>
+                        </button>
+                        <button onclick="selectRole('faculty', this)" class="role-btn group px-12 py-5 border-2 border-slate-100 rounded-[2rem] transition-all flex flex-col items-center gap-2 bg-white">
+                            <i class="fa-solid fa-graduation-cap text-2xl text-blue-900"></i>
+                            <span class="text-[11px] font-black uppercase tracking-widest">Faculty</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm relative">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-3">
+                            <i class="fa-solid fa-sliders text-blue-600"></i> Permission Matrix for <span id="selectedRoleName" class="text-blue-600">Administrator</span>
+                        </h3>
+                        <button onclick="toggleSelectAll(this)" class="text-[10px] font-black text-blue-600 uppercase tracking-widest border-b-2 border-blue-600 pb-1">Select All</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Creation Portal</span><input type="checkbox" data-permission="creation_portal" class="perm-toggle w-5 h-5 accent-blue-900"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Enrollment Approval</span><input type="checkbox" data-permission="enrollment_approval" class="perm-toggle w-5 h-5 accent-blue-900"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Section Loading</span><input type="checkbox" data-permission="section_loading" class="perm-toggle w-5 h-5 accent-blue-900"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] px-2 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Academic Records</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Grade Modification</span><input type="checkbox" data-permission="grade_modification" class="perm-toggle w-5 h-5 accent-emerald-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Transcript Issuance</span><input type="checkbox" data-permission="transcript_issuance" class="perm-toggle w-5 h-5 accent-emerald-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Subject Management</span><input type="checkbox" data-permission="subject_management" class="perm-toggle w-5 h-5 accent-emerald-600"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] px-2 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> System & Security</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Role & Rights Editor</span><input type="checkbox" data-permission="role_rights_editor" class="perm-toggle w-5 h-5 accent-rose-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Audit Trail Viewing</span><input type="checkbox" data-permission="audit_trail_viewing" class="perm-toggle w-5 h-5 accent-rose-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Database Backup</span><input type="checkbox" data-permission="database_backup" class="perm-toggle w-5 h-5 accent-rose-600"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <p class="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] px-2 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Financial Access</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Tuition Verification</span><input type="checkbox" data-permission="tuition_verification" class="perm-toggle w-5 h-5 accent-amber-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Scholarship Tagging</span><input type="checkbox" data-permission="scholarship_tagging" class="perm-toggle w-5 h-5 accent-amber-600"></div>
+                                <div class="permission-card p-4 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold text-slate-700">Financial Holds</span><input type="checkbox" data-permission="financial_holds" class="perm-toggle w-5 h-5 accent-amber-600"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 flex justify-end items-center gap-4">
+                        <span id="saveStatus" class="text-xs font-bold text-slate-400 hidden"></span>
+                        <button onclick="savePermissions()" id="saveBtn" class="px-10 py-4 bg-blue-900 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] shadow-lg hover:-translate-y-1 transition transform disabled:opacity-50">
+                            <i class="fas fa-save mr-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+
+            <div id="assignView" class="view-section space-y-8">
+                <div class="max-w-xl mx-auto py-12">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">Grant User Access</h2>
+                        <p class="text-slate-400 text-sm mt-2 font-medium">Link a verified BCP account to an institutional access role.</p>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="space-y-2 relative">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Search BCP Account</label>
+                            <div class="relative">
+                                <input type="text" id="userSearchInput" onkeyup="filterUsers()" onfocus="showResults()" placeholder="Type name or email..." class="w-full glass-input px-6 py-5 rounded-3xl text-sm font-bold outline-none pr-12">
+                                <i class="fa-solid fa-magnifying-glass absolute right-6 top-6 text-slate-300"></i>
+                                <div id="searchResults" class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl search-results overflow-hidden">
+                                    <div onclick="selectUser('j.delmundo@bcp.edu.ph')" class="px-6 py-4 text-sm font-bold text-slate-700 border-b border-slate-50"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8ae0a4eeefe6e7ffe4eee5cae8e9faa4efeeffa4fae2">[email&#160;protected]</a></div>
+                                    <div onclick="selectUser('r.garcia@bcp.edu.ph')" class="px-6 py-4 text-sm font-bold text-slate-700 border-b border-slate-50"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="52207c353320313b33123031227c3736277c223a">[email&#160;protected]</a></div>
+                                    <div onclick="selectUser('m.santos@bcp.edu.ph')" class="px-6 py-4 text-sm font-bold text-slate-700 border-b border-slate-50"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d5b8fba6b4bba1baa695b7b6a5fbb0b1a0fba5bd">[email&#160;protected]</a></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Access Role</label>
+                            <select class="w-full glass-input px-6 py-5 rounded-3xl text-sm font-bold bg-white outline-none">
+                                <option>Assign Role...</option>
+                                <option>Administrator</option>
+                                <option>Registrar</option>
+                                <option>Faculty</option>
+                            </select>
+                        </div>
+                        <div class="pt-4">
+                            <button class="w-full py-5 bg-blue-900 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-50 transition transform hover:-translate-y-1">Authorize Access Grant</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auditView" class="view-section">
+                <div class="flex justify-between items-center mb-10">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">Security Audit Trail</h2>
+                        <p class="text-slate-400 text-sm mt-1">Institutional record of all role and permission modifications.</p>
+                    </div>
+                    <button class="px-6 py-3 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition"><i class="fas fa-file-export mr-2"></i>Export Logs</button>
+                </div>
+
+                <div class="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Administrator</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Action Performed</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody" class="divide-y divide-slate-100">
+                            <tr><td colspan="4" class="px-8 py-8 text-center text-slate-400 text-sm">Switch to Audit Trail to load logs.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <script>
+        let currentRole = 'admin';
+        const permissionsCache = {};
+        const defaultPermissions = {
+            creation_portal:    true,
+            enrollment_approval:true,
+            section_loading:    true,
+            grade_modification: true,
+            transcript_issuance:true,
+            subject_management: true,
+            role_rights_editor: true,
+            audit_trail_viewing:true,
+            database_backup:    true,
+            tuition_verification:true,
+            scholarship_tagging:true,
+            financial_holds:    true
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.perm-toggle').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (!permissionsCache[currentRole]) permissionsCache[currentRole] = {};
+                    permissionsCache[currentRole][cb.dataset.permission] = cb.checked;
+                });
+            });
+            loadPermissions('admin');
+        });
+
+        function switchMode(mode, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('settingsView').classList.remove('active');
+            document.getElementById('assignView').classList.remove('active');
+            document.getElementById('auditView').classList.remove('active');
+            document.getElementById(mode + 'View').classList.add('active');
+            if (mode === 'audit') loadAuditLog();
+        }
+
+        function selectRole(role, btn) {
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            document.getElementById('selectedRoleName').innerText =
+                role.charAt(0).toUpperCase() + role.slice(1);
+
+            currentRole = role;
+
+            loadPermissions(role);
+        }
+
+        function saveCurrentRoleToCache() {
+            const perms = {};
+            document.querySelectorAll('.perm-toggle').forEach(cb => {
+                perms[cb.dataset.permission] = cb.checked;
+            });
+            permissionsCache[currentRole] = perms;
+        }
+
+        async function loadPermissions(role) {
+            setStatus('Loading…', 'slate');
+            try {
+                const data = await fetchPermissionsFromDB(role);
+                permissionsCache[role] = data;
+                applyPermissionsToUI(data);
+                setStatus('', '');
+            } catch (e) {
+                permissionsCache[role] = { ...defaultPermissions };
+                applyPermissionsToUI(permissionsCache[role]);
+                setStatus('', '');
+            }
+        }
+
+        async function fetchPermissionsFromDB(role) {
+            const res = await fetch(`../api/get_permission.php?role=${encodeURIComponent(role)}`);
+            if (!res.ok) throw new Error('Network error');
+            const data = await res.json();
+            if (data.success && data.permissions) {
+                return { ...defaultPermissions, ...data.permissions };
+            }
+            return { ...defaultPermissions };
+        }
+
+        function applyPermissionsToUI(perms) {
+            document.querySelectorAll('.perm-toggle').forEach(cb => {
+                const key = cb.dataset.permission;
+                cb.checked = perms[key] !== undefined ? perms[key] : true;
+            });
+        }
+
+        async function savePermissions() {
+            const perms = {};
+            document.querySelectorAll('.perm-toggle').forEach(cb => {
+                perms[cb.dataset.permission] = cb.checked;
+            });
+
+            permissionsCache[currentRole] = { ...perms };
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            setStatus('Saving…', 'slate');
+
+            try {
+                const res = await fetch('../api/save_permissions.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: currentRole, permissions: perms })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setStatus('✓ Saved successfully', 'green');
+                } else {
+                    setStatus('⚠ ' + (data.message || 'Save failed'), 'red');
+                }
+            } catch (e) {
+                setStatus('⚠ Network error', 'red');
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => setStatus('', ''), 3000);
+            }
+        }
+
+        function toggleSelectAll(btn) {
+            const allChecked = [...document.querySelectorAll('.perm-toggle')].every(c => c.checked);
+            document.querySelectorAll('.perm-toggle').forEach(cb => cb.checked = !allChecked);
+            btn.textContent = allChecked ? 'Select All' : 'Deselect All';
+            if (!permissionsCache[currentRole]) permissionsCache[currentRole] = {};
+            document.querySelectorAll('.perm-toggle').forEach(cb => {
+                permissionsCache[currentRole][cb.dataset.permission] = cb.checked;
+            });
+        }
+
+        function setStatus(msg, color) {
+            const el = document.getElementById('saveStatus');
+            if (!msg) { el.classList.add('hidden'); return; }
+            el.classList.remove('hidden');
+            el.className = `text-xs font-bold hidden`;
+            if (color === 'green') el.className = 'text-xs font-bold text-emerald-600';
+            else if (color === 'red') el.className = 'text-xs font-bold text-red-500';
+            else el.className = 'text-xs font-bold text-slate-400';
+            el.textContent = msg;
+        }
+
+        async function loadAuditLog(filter = 'All Events') {
+            const tbody = document.getElementById('auditTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="4" class="px-8 py-8 text-center text-slate-400 text-sm">Loading logs…</td></tr>`;
+            try {
+                const res = await fetch(`../api/get_audit_log.php?filter=${encodeURIComponent(filter)}`);
+                const data = await res.json();
+                if (!data.success || !data.logs.length) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-8 py-8 text-center text-slate-400 text-sm">No logs found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.logs.map(log => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-8 py-5 text-xs font-mono text-slate-400">${log.ts}</td>
+                        <td class="px-8 py-5 text-sm font-bold text-slate-800">${escHtml(log.by)}</td>
+                        <td class="px-8 py-5 text-sm text-slate-600">${escHtml(log.detail)}</td>
+                        <td class="px-8 py-5 text-center">
+                            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${log.status === 'Success'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'}">${escHtml(log.status)}</span>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-8 py-8 text-center text-red-400 text-sm">Failed to load logs.</td></tr>`;
+            }
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function filterUsers() {
+            let input = document.getElementById('userSearchInput').value.toLowerCase();
+            document.getElementById('searchResults').classList.remove('hidden');
+            document.getElementById('searchResults').querySelectorAll('div').forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(input) ? '' : 'none';
+            });
+        }
+
+        function showResults() {
+            document.getElementById('searchResults').classList.remove('hidden');
+        }
+
+        function selectUser(email) {
+            document.getElementById('userSearchInput').value = email;
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#userSearchInput') && !e.target.closest('#searchResults')) {
+                const r = document.getElementById('searchResults');
+                if (r) r.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

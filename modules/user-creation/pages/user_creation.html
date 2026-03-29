@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCP SIEMS | Enrollment & Account Provisioning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        .automated-card { background: linear-gradient(135deg, #060a14 0%, #1e293b 100%); }
+        .glass-input { background: #ffffff; border: 1px solid #e2e8f0; transition: all 0.2s; }
+        .glass-input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); outline: none; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .section-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; border-left: 4px solid #2563eb; padding-left: 1rem; }
+        .role-content { display: none; }
+        .role-content.active { display: block; }
+
+        /* Role radio cards */
+        .role-radio-card { transition: all 0.2s; border: 2px solid #e2e8f0; }
+        .role-radio-card:has(input:checked) { border-color: #2563eb; background-color: #eff6ff; }
+        .role-radio-card:has(input:checked) .role-icon { color: #2563eb; }
+        .role-radio-card:has(input:checked) .role-label { color: #1d4ed8; }
+        .role-radio-card:has(input:checked) .role-check { display: block; }
+        .role-check { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-7xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row border border-slate-200" style="height: 92vh;">
+        
+        <div class="lg:w-2/3 flex flex-col bg-white">
+            <div class="p-8 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-md z-20 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <img src="../../../assets/img/images.png" alt="BCP" class="h-12 w-12 object-contain">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">Creation Portal</h2>
+                        <p class="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">Bestlink College of the Philippines</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registrar Terminal</span>
+                    <span class="text-xs font-black text-slate-700 bg-slate-100 px-3 py-1 rounded-full">AY 2026-2027</span>
+                </div>
+            </div>
+
+            <div class="p-10 overflow-y-auto flex-grow space-y-12">
+                
+                <section>
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">01. User Classification</h3>
+                    </div>
+                    <div class="grid grid-cols-4 gap-3 mb-3">
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="student" class="sr-only" checked onchange="switchRole('student')">
+                            <i class="role-icon fas fa-user-graduate text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Student</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="faculty" class="sr-only" onchange="switchRole('faculty')">
+                            <i class="role-icon fas fa-chalkboard-teacher text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Faculty</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="admin" class="sr-only" onchange="switchRole('admin')">
+                            <i class="role-icon fas fa-user-shield text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Admin</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="superadmin" class="sr-only" onchange="switchRole('superadmin')">
+                            <i class="role-icon fas fa-crown text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Super Admin</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-4 gap-3">
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="registrar" class="sr-only" onchange="switchRole('registrar')">
+                            <i class="role-icon fas fa-file-invoice text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Registrar</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="cashier" class="sr-only" onchange="switchRole('cashier')">
+                            <i class="role-icon fas fa-cash-register text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Cashier</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <label class="role-radio-card relative flex flex-col p-4 rounded-2xl cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="role" value="librarian" class="sr-only" onchange="switchRole('librarian')">
+                            <i class="role-icon fas fa-book text-xl mb-1 text-slate-500"></i>
+                            <p class="role-label font-bold text-xs uppercase text-slate-600">Librarian</p>
+                            <div class="role-check absolute top-2 right-2 text-blue-600"><i class="fas fa-check-circle text-xs"></i></div>
+                        </label>
+                        <div></div>
+                    </div>
+                </section>
+
+                <section class="space-y-4">
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">02. Legal Identity</h3>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">First Name</label>
+                            <input type="text" id="firstName" placeholder="Juan" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold" onkeyup="triggerAutomation()">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Middle Name</label>
+                            <input type="text" placeholder="Protacio" class="w-full glass-input px-4 py-3 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Last Name</label>
+                            <input type="text" id="lastName" placeholder="Del Mundo" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold" onkeyup="triggerAutomation()">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Birth Date</label>
+                            <input type="date" id="birthDate" class="w-full glass-input px-4 py-3 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Gender</label>
+                            <select id="gender" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold bg-white">
+                                <option>Male</option>
+                                <option>Female</option>
+                            </select>
+                        </div>
+                        <div id="lrnField">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">LRN (12-Digit)</label>
+                            <input type="text" id="lrnInput" placeholder="000000000000" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-mono" oninput="onLrnInput()" maxlength="12">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="space-y-4">
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">03. Contact & Residency</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Mobile Number</label>
+                            <input type="tel" id="mobileNumber" placeholder="09XXXXXXXXX" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Personal Email</label>
+                            <input type="email" id="personalEmail" placeholder="juan.dc@gmail.com" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-3">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Permanent Home Address</label>
+                            <input type="text" id="streetAddress" placeholder="House #, Street, Village, Brgy." class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">City</label>
+                            <input type="text" id="city" placeholder="Quezon City" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Province</label>
+                            <input type="text" id="province" placeholder="Metro Manila" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Zip Code</label>
+                            <input type="text" id="zipCode" placeholder="1100" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                </section>
+
+                <section id="emergencySection" class="role-content active space-y-4">
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">04. Emergency Contact</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Guardian Full Name</label>
+                            <input type="text" id="guardianName" placeholder="Maria Dela Cruz" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Guardian Contact #</label>
+                            <input type="tel" id="guardianContact" placeholder="09XXXXXXXXX" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Relationship to Student</label>
+                            <select id="guardianRelationship" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold bg-white">
+                                <option value="" disabled selected>Select Relationship</option>
+                                <option>Parent</option>
+                                <option>Mother</option>
+                                <option>Father</option>
+                                <option>Stepmother</option>
+                                <option>Stepfather</option>
+                                <option>Grandparent</option>
+                                <option>Sibling</option>
+                                <option>Aunt / Uncle</option>
+                                <option>Legal Guardian</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="studentPlacement" class="role-content active space-y-4">
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">05. Academic Placement</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Course / Degree Program</label>
+                            <select id="studentProgram" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option disabled selected>Select Program Offering</option>
+                                <option>BS Information Technology</option>
+                                <option>BS Hospitality Management</option>
+                                <option>BS Office Administration</option>
+                                <option>BS Business Administration</option>
+                                <option>BS Criminology</option>
+                                <option>Bachelor of Elementary Education</option>
+                                <option>Bachelor of Secondary Education</option>
+                                <option>BS Computer Engineering</option>
+                                <option>BS Tourism Management</option>
+                                <option>BS Entrepreneurship</option>
+                                <option>BS Accounting Information System</option>
+                                <option>BS Psychology</option>
+                                <option>BL Information Science</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Year Level</label>
+                            <select id="studentYearLevel" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option>1st Year</option>
+                                <option>2nd Year</option>
+                                <option>3rd Year</option>
+                                <option>4th Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="facultyPlacement" class="role-content space-y-4">
+                    <div class="section-header">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">04. Faculty Assignment</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Department</label>
+                            <select id="facultyDept" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option disabled selected>Select Department</option>
+                                <option>College of Computer Studies</option>
+                                <option>College of Business & Accountancy</option>
+                                <option>College of Education</option>
+                                <option>College of Criminology</option>
+                                <option>College of Hospitality Management</option>
+                                <option>College of Engineering</option>
+                                <option>College of Arts & Sciences</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Position / Rank</label>
+                            <select id="facultyPosition" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option>Instructor I</option>
+                                <option>Instructor II</option>
+                                <option>Instructor III</option>
+                                <option>Assistant Professor I</option>
+                                <option>Assistant Professor II</option>
+                                <option>Associate Professor</option>
+                                <option>Professor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Employment Type</label>
+                            <select id="facultyEmployment" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option value="Full-time">Full-Time Regular</option>
+                                <option value="Part-time">Part-Time</option>
+                                <option value="Contractual">Contractual</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Highest Educational Attainment</label>
+                            <select class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option>Bachelor's Degree</option>
+                                <option>Master's Degree</option>
+                                <option>Doctorate Degree</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Specialization / Subject Area</label>
+                        <input type="text" id="facultySpecialization" placeholder="e.g., Web Development, Database Management" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                    </div>
+                </section>
+
+                <section id="staffPlacement" class="role-content space-y-4">
+                    <div class="section-header">
+                        <h3 id="staffSectionTitle" class="text-sm font-black text-slate-800 uppercase tracking-widest">04. Staff Assignment</h3>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Office / Department</label>
+                            <select id="staffOfficeSelect" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option disabled selected>Select Office</option>
+                                <option>Office of the President</option>
+                                <option>Office of the Registrar</option>
+                                <option>Accounting Office</option>
+                                <option>Admissions Office</option>
+                                <option>Human Resources</option>
+                                <option>Library Services</option>
+                                <option>IT Department</option>
+                                <option>Student Affairs</option>
+                                <option>Guidance & Counseling</option>
+                                <option>Scholarship Office</option>
+                                <option>Facilities Management</option>
+                                <option>Cashier's Office</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Position Title</label>
+                            <input type="text" id="staffPositionInput" placeholder="e.g., Administrative Officer III" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Employment Type</label>
+                            <select class="w-full glass-input px-4 py-3 rounded-xl text-sm font-bold bg-white outline-none">
+                                <option>Permanent</option>
+                                <option>Temporary</option>
+                                <option>Contractual</option>
+                                <option>Job Order</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Immediate Supervisor</label>
+                            <input type="text" placeholder="Supervisor's Full Name" class="w-full glass-input px-4 py-3 rounded-xl text-sm font-semibold">
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="p-8 border-t border-slate-100 bg-slate-50 flex justify-end gap-4">
+                <button onclick="resetForm()" class="px-8 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition">Reset Form</button>
+                <button id="submitBtn" onclick="submitForm()" class="px-12 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition uppercase tracking-widest">
+                    Confirm Enrollment
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:w-1/3 automated-card p-8 text-white flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none overflow-hidden">
+                <div class="absolute -top-24 -left-24 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+            </div>
+
+            <div class="relative z-10 flex flex-col gap-6 flex-grow justify-center">
+                <h2 class="text-[2.5rem] font-black tracking-tight leading-none">Live Credentials</h2>
+                <div>
+                    <label class="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2.5 block">Institutional Email</label>
+                    <div class="bg-white/[0.03] border border-white/[0.08] p-4 rounded-2xl backdrop-blur-sm">
+                        <span id="autoEmail" class="text-lg font-semibold text-blue-400 tracking-tight break-all">waiting...</span>
+                        <div class="mt-2 flex items-center gap-2">
+                            <span class="text-[8px] bg-blue-500/15 text-blue-300 px-2 py-0.5 rounded-md font-semibold">@bcp.edu.ph</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label id="idLabel" class="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2.5 block">Student ID</label>
+                    <div class="bg-white/[0.03] border border-white/[0.08] p-4 rounded-2xl backdrop-blur-sm">
+                        <span id="autoID" class="text-2xl font-black text-emerald-400 font-mono tracking-wider">BCP-2026-######</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative z-10 mt-6 space-y-2.5">
+                <div class="p-3.5 bg-blue-500/[0.08] rounded-xl border border-blue-500/20 text-[10px] text-blue-200 font-normal leading-relaxed flex items-start gap-2">
+                    <i class="fas fa-envelope text-blue-400 mt-0.5 text-xs flex-shrink-0"></i>
+                    <span>Institutional email and temporary password will be sent to the personal email upon confirmation.</span>
+                </div>
+                <div class="p-3.5 bg-emerald-500/[0.08] rounded-xl border border-emerald-500/20 text-[10px] text-emerald-300 font-normal leading-relaxed flex items-start gap-2">
+                    <i class="fas fa-shield-alt text-emerald-400 mt-0.5 text-xs flex-shrink-0"></i>
+                    <span>Credentials will be synced to the database & SMS module for account activation.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '../api';
+
+        // Role metadata for button labels, ID labels, and ID prefixes
+        const roleMeta = {
+            student:    { btn: 'CONFIRM ENROLLMENT',         idLabel: 'Student ID Number', prefix: 'BCP-STU'  },
+            faculty:    { btn: 'CONFIRM FACULTY ONBOARDING', idLabel: 'Faculty ID Number', prefix: 'BCP-FAC'  },
+            admin:      { btn: 'CONFIRM STAFF ONBOARDING',   idLabel: 'Staff ID Number',   prefix: 'BCP-ADM'  },
+            superadmin: { btn: 'CONFIRM STAFF ONBOARDING',   idLabel: 'Staff ID Number',   prefix: 'BCP-SADM' },
+            registrar:  { btn: 'CONFIRM STAFF ONBOARDING',   idLabel: 'Staff ID Number',   prefix: 'BCP-REG'  },
+            cashier:    { btn: 'CONFIRM STAFF ONBOARDING',   idLabel: 'Staff ID Number',   prefix: 'BCP-CSH'  },
+            librarian:  { btn: 'CONFIRM STAFF ONBOARDING',   idLabel: 'Staff ID Number',   prefix: 'BCP-LIB'  },
+        };
+
+        // Staff section pre-fill defaults per role
+        const staffDefaults = {
+            admin:      { office: 'Office of the President',  position: 'Administrative Officer' },
+            superadmin: { office: 'IT Department',            position: 'System Administrator'   },
+            registrar:  { office: 'Office of the Registrar',  position: 'Registrar Staff'        },
+            cashier:    { office: "Cashier's Office",         position: 'Cashier'                },
+            librarian:  { office: 'Library Services',         position: 'Librarian'              },
+        };
+
+        function getFieldValue(selector, defaultValue = '') {
+            const el = document.querySelector(selector);
+            return el ? el.value.trim() : defaultValue;
+        }
+
+        function switchRole(role) {
+            // Hide all role-specific sections
+            ['emergencySection','studentPlacement','facultyPlacement','staffPlacement'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+
+            // LRN field — student only
+            document.getElementById('lrnField').style.display = role === 'student' ? 'block' : 'none';
+
+            // Show the right section
+            if (role === 'student') {
+                document.getElementById('emergencySection').classList.add('active');
+                document.getElementById('studentPlacement').classList.add('active');
+            } else if (role === 'faculty') {
+                document.getElementById('facultyPlacement').classList.add('active');
+            } else {
+                // admin, superadmin, registrar, cashier, librarian — shared staff section
+                document.getElementById('staffPlacement').classList.add('active');
+                // Pre-select sensible office default
+                const def = staffDefaults[role];
+                if (def) {
+                    const officeSelect = document.getElementById('staffOfficeSelect');
+                    for (let i = 0; i < officeSelect.options.length; i++) {
+                        if (officeSelect.options[i].text === def.office) {
+                            officeSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    const posInput = document.getElementById('staffPositionInput');
+                    if (!posInput.value) posInput.placeholder = def.position;
+                }
+                // Update section title
+                const titles = { admin: 'Administrative Assignment', superadmin: 'System Administration', registrar: 'Registrar Assignment', cashier: 'Cashier Assignment', librarian: 'Library Assignment' };
+                document.getElementById('staffSectionTitle').innerText = '04. ' + (titles[role] || 'Staff Assignment');
+            }
+
+            // Update right panel
+            const meta = roleMeta[role];
+            document.getElementById('submitBtn').innerText = meta.btn;
+            document.getElementById('idLabel').innerText = meta.idLabel;
+            // Show correct prefix placeholder immediately before DB responds
+            document.getElementById('autoID').innerText = `${meta.prefix}-######`;
+
+            updateNextID(role);
+            triggerAutomation();
+        }
+
+        // Client-side sequential counter — used as fallback when DB is unreachable
+        // Tracks how many of each role have been created this session
+        const localCounters = { student: 0, faculty: 0, admin: 0, superadmin: 0, registrar: 0, cashier: 0, librarian: 0 };
+
+        function formatID(prefix, n) {
+            return `${prefix}-${String(n).padStart(6, '0')}`;
+        }
+
+        // Fires every time the LRN field changes — updates the ID preview immediately
+        function onLrnInput() {
+            const lrn  = document.getElementById('lrnInput').value.trim();
+            const role = document.querySelector('input[name="role"]:checked').value;
+            if (role !== 'student') return;
+
+            if (lrn.length >= 4) {
+                // Show live preview using last 4 digits of whatever has been typed so far
+                const year  = new Date().getFullYear();
+                const last6 = lrn.slice(-6).padStart(6, '0');
+                document.getElementById('autoID').innerText = `BCP-${year}-${last6}`;
+            } else {
+                document.getElementById('autoID').innerText = `BCP-${new Date().getFullYear()}-####`;
+            }
+            // Also re-run name automation in case name is already filled
+            triggerAutomation();
+        }
+
+        function triggerAutomation() {
+            const firstName = document.getElementById('firstName').value.trim().toLowerCase();
+            const lastName = document.getElementById('lastName').value.trim().toLowerCase();
+            const role = document.querySelector('input[name="role"]:checked').value;
+            const emailOutput = document.getElementById('autoEmail');
+
+            if (firstName && lastName) {
+                const initial = firstName.charAt(0);
+                const cleanLast = lastName.replace(/\s+/g, '');
+                emailOutput.innerHTML = `<span class="text-white">${initial}.${cleanLast}</span>@bcp.edu.ph`;
+            } else {
+                emailOutput.innerText = 'waiting...';
+            }
+
+            // Always update the ID preview based on current LRN / role
+            if (role === 'student') {
+                const lrn = document.getElementById('lrnInput').value.trim();
+                if (lrn.length >= 4) {
+                    const year  = new Date().getFullYear();
+                    const last6 = lrn.slice(-6).padStart(6, '0');
+                    document.getElementById('autoID').innerText = `BCP-${year}-${last6}`;
+                } else {
+                    document.getElementById('autoID').innerText = `BCP-${new Date().getFullYear()}-####`;
+                }
+            } else {
+                updateNextID(role);
+            }
+
+            if (!firstName && !lastName) {
+                const pr = roleMeta[role]?.prefix || 'BCP';
+                if (role !== 'student') {
+                    document.getElementById('autoID').innerText = `${pr}-######`;
+                }
+            }
+        }
+
+        async function updateNextID(role) {
+            const meta = roleMeta[role];
+            const prefix = meta?.prefix || 'BCP';
+            try {
+                const res = await fetch(`${API_BASE_URL}/get_next_id.php?role=${role}`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('autoID').innerText = data.nextId;
+                } else {
+                    // DB returned error — use local counter as fallback
+                    const n = (localCounters[role] || 0) + 1;
+                    document.getElementById('autoID').innerText = formatID(prefix, n);
+                }
+            } catch {
+                // DB unreachable — use local counter as fallback
+                const n = (localCounters[role] || 0) + 1;
+                document.getElementById('autoID').innerText = formatID(prefix, n);
+            }
+        }
+
+        async function updateNextIDWithLRN(role, lrn) {
+            const meta = roleMeta[role];
+            const prefix = meta?.prefix || 'BCP';
+            try {
+                const res = await fetch(`${API_BASE_URL}/get_next_id.php?role=${role}&lrn=${encodeURIComponent(lrn)}`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('autoID').innerText = data.nextId;
+                } else {
+                    const n = (localCounters[role] || 0) + 1;
+                    document.getElementById('autoID').innerText = formatID(prefix, n);
+                }
+            } catch {
+                const n = (localCounters[role] || 0) + 1;
+                document.getElementById('autoID').innerText = formatID(prefix, n);
+            }
+        }
+
+        async function submitForm() {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerText;
+            const role = document.querySelector('input[name="role"]:checked').value;
+
+            const formData = {
+                role,
+                firstName:     document.getElementById('firstName')?.value.trim()     || '',
+                middleName:    document.querySelector('input[placeholder="Protacio"]')?.value.trim() || '',
+                lastName:      document.getElementById('lastName')?.value.trim()      || '',
+                birthDate:     document.getElementById('birthDate')?.value            || '',
+                gender:        document.getElementById('gender')?.value               || 'Male',
+                mobileNumber:  document.getElementById('mobileNumber')?.value.trim()  || '',
+                personalEmail: document.getElementById('personalEmail')?.value.trim() || '',
+                streetAddress: document.getElementById('streetAddress')?.value.trim() || '',
+                barangay:      '',
+                city:          document.getElementById('city')?.value.trim()          || '',
+                province:      document.getElementById('province')?.value.trim()      || '',
+                zipCode:       document.getElementById('zipCode')?.value.trim()       || '',
+            };
+
+            if (role === 'student') {
+                formData.lrn              = document.getElementById('lrnInput')?.value.trim()        || '';
+                formData.program          = document.getElementById('studentProgram')?.value         || '';
+                formData.yearLevel        = document.getElementById('studentYearLevel')?.value       || '';
+                formData.guardianName         = document.getElementById('guardianName')?.value.trim()         || '';
+                formData.guardianContact      = document.getElementById('guardianContact')?.value.trim()      || '';
+                formData.guardianRelationship = document.getElementById('guardianRelationship')?.value        || '';
+            } else if (role === 'faculty') {
+                formData.department      = document.getElementById('facultyDept')?.value            || '';
+                formData.position        = document.getElementById('facultyPosition')?.value        || '';
+                formData.employmentType  = document.getElementById('facultyEmployment')?.value      || 'Full-time';
+                formData.specialization  = document.getElementById('facultySpecialization')?.value.trim() || '';
+            } else {
+                // admin, superadmin, registrar, cashier, librarian
+                formData.department     = document.getElementById('staffOfficeSelect')?.value  || '';
+                formData.position       = document.getElementById('staffPositionInput')?.value.trim() || '';
+                const staffEmpSelect    = document.querySelector('#staffPlacement select:not(#staffOfficeSelect)');
+                formData.employmentType = staffEmpSelect?.value || 'Permanent';
+                formData.supervisor     = document.querySelector('#staffPlacement input[placeholder="Supervisor\'s Full Name"]')?.value.trim() || '';
+            }
+
+            if (!formData.firstName || !formData.lastName || !formData.personalEmail) {
+                alert('⚠️ Please fill in all required fields:\n• First Name\n• Last Name\n• Personal Email');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>PROCESSING...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/save_user.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Increment local counter for this role so next preview is correct
+                    if (localCounters[role] !== undefined) localCounters[role]++;
+                    alert(`✅ ACCOUNT CREATED!\n\n` +
+                          `👤 ${result.data.fullName}\n` +
+                          `🆔 ${result.data.userId}\n` +
+                          `📧 ${result.data.institutionalEmail}\n` +
+                          `🔑 Temp Password: ${result.data.temporaryPassword}\n\n` +
+                          `📬 Credentials sent to: ${formData.personalEmail}`);
+                    resetForm();
+                } else {
+                    alert('❌ Failed\n\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Connection Error\n\nMake sure XAMPP is running.\n\n' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            }
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"], input[type="date"]').forEach(i => i.value = '');
+            document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            document.querySelector('input[name="role"][value="student"]').checked = true;
+            switchRole('student');
+            document.getElementById('autoEmail').innerText = 'waiting...';
+            document.getElementById('autoID').innerText = 'BCP-STU-######';
+        }
+
+        window.onload = () => switchRole('student');
+    </script>
+</body>
+</html>
