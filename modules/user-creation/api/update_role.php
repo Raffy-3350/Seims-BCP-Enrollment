@@ -47,8 +47,6 @@ try {
     $detailTables = ROLE_DETAIL_TABLES;
 
     // Update user_id in all detail tables that have a matching record
-    // FIX: removed MySQL-only SET FOREIGN_KEY_CHECKS — not supported in PostgreSQL
-    // FIX: removed backtick identifiers — use plain table names for PostgreSQL
     foreach ($detailTables as $table) {
         try {
             $stmt = $conn->prepare("UPDATE {$table} SET user_id = ? WHERE user_id = ?");
@@ -76,30 +74,35 @@ try {
     }
 
     // Create new role detail record
-    // FIX: replaced MySQL "INSERT IGNORE" with PostgreSQL "ON CONFLICT DO NOTHING"
+    // FIX: replaced ON CONFLICT (which requires a UNIQUE constraint) with
+    //      a SELECT-then-INSERT pattern to safely avoid duplicate inserts.
     if (isset($detailTables[$newRole])) {
         $newTable = $detailTables[$newRole];
         try {
-            if ($newRole === 'student') {
-                $stmt = $conn->prepare("
-                    INSERT INTO {$newTable} (user_id, enrollment_status)
-                    VALUES (?, 'Regular')
-                    ON CONFLICT (user_id) DO NOTHING
-                ");
-            } elseif ($newRole === 'faculty') {
-                $stmt = $conn->prepare("
-                    INSERT INTO {$newTable} (user_id, employment_type)
-                    VALUES (?, 'Full-time')
-                    ON CONFLICT (user_id) DO NOTHING
-                ");
-            } else {
-                $stmt = $conn->prepare("
-                    INSERT INTO {$newTable} (user_id, employment_type)
-                    VALUES (?, 'Permanent')
-                    ON CONFLICT (user_id) DO NOTHING
-                ");
+            // Check if a record already exists for this user_id
+            $checkStmt = $conn->prepare("SELECT 1 FROM {$newTable} WHERE user_id = ?");
+            $checkStmt->execute([$newUserId]);
+            $exists = $checkStmt->fetchColumn();
+
+            if (!$exists) {
+                if ($newRole === 'student') {
+                    $stmt = $conn->prepare("
+                        INSERT INTO {$newTable} (user_id, enrollment_status)
+                        VALUES (?, 'Regular')
+                    ");
+                } elseif ($newRole === 'faculty') {
+                    $stmt = $conn->prepare("
+                        INSERT INTO {$newTable} (user_id, employment_type)
+                        VALUES (?, 'Full-time')
+                    ");
+                } else {
+                    $stmt = $conn->prepare("
+                        INSERT INTO {$newTable} (user_id, employment_type)
+                        VALUES (?, 'Permanent')
+                    ");
+                }
+                $stmt->execute([$newUserId]);
             }
-            $stmt->execute([$newUserId]);
         } catch (Exception $e) {
             throw new Exception('Failed to create detail record: ' . $e->getMessage());
         }
