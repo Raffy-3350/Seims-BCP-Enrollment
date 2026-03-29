@@ -3,3 +3,9 @@
         "phpmailer/phpmailer": "^7.0"
     }
 }
+{
+    "require": {
+        "php": "^8.2",
+        "ext-pdo_pgsql": "*"
+    }
+}
