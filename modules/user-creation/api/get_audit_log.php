@@ -1,61 +1,58 @@
 <?php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
 
 require_once __DIR__ . '/config.php';
 
 $conn = getDBConnection();
 
 try {
-    $filter = $_GET['filter'] ?? 'All Events';
+    $filter  = $_GET['filter']   ?? 'All Events';
+    $page    = max(1, (int)($_GET['page']     ?? 1));
+    $perPage = max(1, (int)($_GET['per_page'] ?? 10));
+    $offset  = ($page - 1) * $perPage;
 
-    $sql = "SELECT 
-                id, 
-                timestamp as ts, 
-                performed_by as `by`, 
-                performed_by_role as byRole, 
-                event_type as event, 
-                details as detail, 
-                affected_entity as affected, 
-                status 
-            FROM audit_log";
+    $where = match($filter) {
+        'Login Events'       => " WHERE event_type ILIKE '%Login%'",
+        'Password Reset'     => " WHERE event_type ILIKE '%Password Reset%'",
+        'Role Changes'       => " WHERE event_type ILIKE '%Role%'",
+        'Permission Changes' => " WHERE event_type ILIKE '%Permission%'",
+        'User Creation'      => " WHERE event_type ILIKE '%Created%' OR event_type ILIKE '%Creation%'",
+        'User Deletion'      => " WHERE event_type ILIKE '%Deleted%' OR event_type ILIKE '%Deletion%'",
+        'Failed Access'      => " WHERE status = 'Blocked' OR status = 'Failed'",
+        default              => '',
+    };
 
-    $whereClause = '';
-    switch ($filter) {
-        case 'Login Events':
-            $whereClause = " WHERE event_type LIKE '%Login%'";
-            break;
-        case 'Password Reset':
-            $whereClause = " WHERE event_type LIKE '%Password Reset%'";
-            break;
-        case 'Role Changes':
-            $whereClause = " WHERE event_type LIKE '%Role%'";
-            break;
-        case 'Permission Changes':
-            $whereClause = " WHERE event_type LIKE '%Permission%'";
-            break;
-        case 'User Creation':
-            $whereClause = " WHERE event_type LIKE '%Created%' OR event_type LIKE '%Creation%'";
-            break;
-        case 'User Deletion':
-            $whereClause = " WHERE event_type LIKE '%Deleted%' OR event_type LIKE '%Deletion%'";
-            break;
-        case 'Failed Access':
-            $whereClause = " WHERE status = 'Blocked' OR status = 'Failed'";
-            break;
-    }
-    $sql .= $whereClause;
-    $sql .= " ORDER BY timestamp DESC LIMIT 100";
+    $total = (int)$conn->query("SELECT COUNT(*) FROM audit_log" . $where)->fetchColumn();
+    $totalPages = max(1, (int)ceil($total / $perPage));
+
+    $sql = "SELECT
+                id,
+                timestamp         AS ts,
+                performed_by      AS \"by\",
+                performed_by_role AS \"byRole\",
+                event_type        AS event,
+                details           AS detail,
+                affected_entity   AS affected,
+                status
+            FROM audit_log"
+            . $where
+            . " ORDER BY timestamp DESC"
+            . " LIMIT " . $perPage . " OFFSET " . $offset;
 
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    $logs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['success' => true, 'logs' => $logs]);
+    echo json_encode([
+        'success'     => true,
+        'logs'        => $logs,
+        'total'       => $total,
+        'total_pages' => $totalPages,
+        'page'        => $page,
+        'per_page'    => $perPage,
+    ]);
 
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-} finally {
-    $conn->close();
 }
