@@ -1,10 +1,5 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'bcp_enrollment');
-
-define('VALID_ROLES', ['student', 'faculty', 'admin', 'superadmin', 'registrar', 'cashier', 'librarian']);
+define('VALID_ROLES', ['student','faculty','admin','superadmin','registrar','cashier','librarian']);
 
 define('ROLE_PREFIXES', [
     'student'    => 'BCP',
@@ -27,69 +22,56 @@ define('ROLE_DETAIL_TABLES', [
 ]);
 
 function getDBConnection() {
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
-        die(json_encode([
-            'success' => false,
-            'message' => 'Database connection failed: ' . $conn->connect_error
-        ]));
+    $host     = getenv('DB_HOST');
+    $port     = getenv('DB_PORT') ?: '5432';
+    $dbname   = getenv('DB_NAME') ?: 'postgres';
+    $user     = getenv('DB_USER') ?: 'postgres';
+    $password = getenv('DB_PASSWORD');
+    try {
+        return new PDO("pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require", $user, $password, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+    } catch (PDOException $e) {
+        error_log("DB connection failed: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database connection error.']);
+        exit;
     }
-    $conn->set_charset("utf8mb4");
-    return $conn;
 }
 
-function generateNextUserID($conn, $role, $lrn = null) {
-    $year     = date('Y');
-    $prefixes = ROLE_PREFIXES;
-
+function generateNextUserID($pdo, $role, $lrn = null) {
+    $year = date('Y');
     if ($role === 'student' && !empty($lrn)) {
-        $last4 = substr(preg_replace('/\D/', '', $lrn), -6);
-        return "BCP-$year-$last4";
+        $last6 = substr(preg_replace('/\D/', '', $lrn), -6);
+        return "BCP-$year-$last6";
     }
-
-    $prefix  = $prefixes[$role] ?? 'BCP-STF';
-    $maxTries = 10;
-
-    for ($i = 0; $i < $maxTries; $i++) {
-        $rand4  = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        $newId  = "$prefix-$rand4";
-
-        $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM users WHERE user_id = ?");
-        $stmt->bind_param("s", $newId);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-
-        if ($row['cnt'] === 0) {
-            return $newId;
-        }
+    $prefix = ROLE_PREFIXES[$role] ?? 'BCP-STF';
+    for ($i = 0; $i < 10; $i++) {
+        $rand6 = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        $newId = "$prefix-$rand6";
+        $stmt  = $pdo->prepare("SELECT COUNT(*) FROM users WHERE user_id = ?");
+        $stmt->execute([$newId]);
+        if ((int)$stmt->fetchColumn() === 0) return $newId;
     }
-
     return "$prefix-" . substr(time(), -6);
 }
 
 function generateEmail($firstName, $lastName) {
-    $initial   = strtolower(substr(trim($firstName), 0, 1));
-    $cleanLast = strtolower(str_replace(' ', '', trim($lastName)));
-    return $initial . '.' . $cleanLast . '@bcp.edu.ph';
+    return strtolower(substr(trim($firstName), 0, 1)) . '.' . strtolower(str_replace(' ', '', trim($lastName))) . '@bcp.edu.ph';
 }
 
 function generateTempPassword($length = 12) {
-    $chars    = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-    $password = '';
-    for ($i = 0; $i < $length; $i++) {
-        $password .= $chars[random_int(0, strlen($chars) - 1)];
-    }
-    return $password;
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    $pw = '';
+    for ($i = 0; $i < $length; $i++) $pw .= $chars[random_int(0, strlen($chars) - 1)];
+    return $pw;
 }
 
-function logActivity($conn, $performed_by, $performed_by_role, $event_type, $details, $affected_entity, $status) {
-    $stmt = $conn->prepare("
-        INSERT INTO audit_log (performed_by, performed_by_role, event_type, details, affected_entity, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ");
-    if ($stmt) {
-        $stmt->bind_param("ssssss", $performed_by, $performed_by_role, $event_type, $details, $affected_entity, $status);
-        $stmt->execute();
+function logActivity($pdo, $performed_by, $performed_by_role, $event_type, $details, $affected_entity, $status) {
+    try {
+        $stmt = $pdo->prepare("INSERT INTO audit_log (performed_by, performed_by_role, event_type, details, affected_entity, status) VALUES (?,?,?,?,?,?)");
+        $stmt->execute([$performed_by, $performed_by_role, $event_type, $details, $affected_entity, $status]);
+    } catch (Throwable $e) {
+        error_log("Audit log error: " . $e->getMessage());
     }
 }
-?>
