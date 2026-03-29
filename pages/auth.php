@@ -6,24 +6,21 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
-require_once __DIR__ . '/../app/config/db.php';
+require_once __DIR__ . '/../app/config/db.php';   // gives us $mysqli (PDO object)
 require_once __DIR__ . '/../app/config/mailer.php';
 
 $identifier = trim($_POST["identifier"] ?? '');
 $password   = $_POST["password"]        ?? '';
 
+// ── Audit logger (PDO version) ────────────────────────────────────────────
 if (!function_exists('logActivity')) {
-    function logActivity($conn, $performedBy, $performedByRole, $eventType, $details, $affectedEntity, $status) {
+    function logActivity($pdo, $performedBy, $performedByRole, $eventType, $details, $affectedEntity, $status) {
         try {
-            $stmt = $conn->prepare("
+            $stmt = $pdo->prepare("
                 INSERT INTO audit_log (performed_by, performed_by_role, event_type, details, affected_entity, status)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
-            if ($stmt) {
-                $stmt->bind_param("ssssss", $performedBy, $performedByRole, $eventType, $details, $affectedEntity, $status);
-                $stmt->execute();
-                $stmt->close();
-            }
+            $stmt->execute([$performedBy, $performedByRole, $eventType, $details, $affectedEntity, $status]);
         } catch (Throwable $e) {
             error_log("Audit log error in auth.php: " . $e->getMessage());
         }
@@ -35,16 +32,16 @@ if (empty($identifier) || empty($password)) {
     exit;
 }
 
-// Helper — log and redirect on failure
-function failAndRedirect($mysqli, $performedBy, $role, $detail, $redirectMsg) {
-    logActivity($mysqli, $performedBy, $role, 'Login Failed', $detail, $performedBy, 'Failed');
-    $mysqli->close();
+// ── Helper: log failure and redirect ─────────────────────────────────────
+function failAndRedirect($pdo, $performedBy, $role, $detail, $redirectMsg) {
+    logActivity($pdo, $performedBy, $role, 'Login Failed', $detail, $performedBy, 'Failed');
     header("location: login.php?error=" . urlencode($redirectMsg));
     exit;
 }
 
 try {
-    // ── 1. Look up user ───────────────────────────────────────────────────────
+    // ── 1. Look up user ───────────────────────────────────────────────────
+    // PostgreSQL: COALESCE instead of IFNULL, no TRIM() issues
     $stmt = $mysqli->prepare("
         SELECT
             id,
@@ -53,19 +50,19 @@ try {
             personal_email,
             password,
             must_change_password,
-            CONCAT(first_name, ' ', IFNULL(middle_name,''), ' ', last_name) AS full_name,
+            CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) AS full_name,
             TRIM(role) AS role,
             status
         FROM users
-        WHERE user_id = ? OR institutional_email = ? OR personal_email = ?
+        WHERE user_id = ?
+           OR institutional_email = ?
+           OR personal_email = ?
         LIMIT 1
     ");
-    $stmt->bind_param('sss', $identifier, $identifier, $identifier);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    $stmt->execute([$identifier, $identifier, $identifier]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // ── 2. No user found ──────────────────────────────────────────────────────
+    // ── 2. No user found ──────────────────────────────────────────────────
     if (!$user) {
         failAndRedirect(
             $mysqli,
@@ -77,7 +74,7 @@ try {
 
     $displayId = $user['institutional_email'] ?: $user['user_id'];
 
-    // ── 3. Account status check ───────────────────────────────────────────────
+    // ── 3. Account status check ───────────────────────────────────────────
     if ($user['status'] !== 'active') {
         failAndRedirect(
             $mysqli,
@@ -87,7 +84,7 @@ try {
         );
     }
 
-    // ── 4. Password verification ──────────────────────────────────────────────
+    // ── 4. Password verification ──────────────────────────────────────────
     if (!password_verify($password, $user['password'] ?? '')) {
         failAndRedirect(
             $mysqli,
@@ -97,15 +94,19 @@ try {
         );
     }
 
-    // ── 5. Check if valid remember_me token exists — skip OTP if so ──────────
-    $stmt = $mysqli->prepare("SELECT remember_token FROM users WHERE id = ? AND remember_token IS NOT NULL AND token_expiry > NOW() LIMIT 1");
-    $stmt->bind_param("i", $user['id']);
-    $stmt->execute();
-    $hasToken = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    // ── 5. Check valid remember_me token — skip OTP if exists ────────────
+    $stmt = $mysqli->prepare("
+        SELECT remember_token
+        FROM users
+        WHERE id = ?
+          AND remember_token IS NOT NULL
+          AND token_expiry > NOW()
+        LIMIT 1
+    ");
+    $stmt->execute([$user['id']]);
+    $hasToken = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($hasToken) {
-        // Skip OTP — go straight to dashboard
         session_regenerate_id(true);
         $_SESSION['loggedin']      = true;
         $_SESSION['id']            = $user['id'];
@@ -118,13 +119,12 @@ try {
         logActivity($mysqli, $displayId, $user['role'], 'User Login',
             "'{$user['full_name']}' logged in via Remember Me (OTP skipped).", $displayId, 'Success');
 
-        $mysqli->close();
         $dest = (strtolower(trim($user['role'])) === 'student') ? 'student_navigation.php' : 'navigation.php';
         header("location: " . $dest);
         exit;
     }
 
-    // ── 6. Store partial session (not fully logged in yet) ────────────────────
+    // ── 6. Store partial session (not fully logged in yet) ────────────────
     session_regenerate_id(true);
     $_SESSION['otp_pending_id']             = $user['id'];
     $_SESSION['otp_pending_role']           = $user['role'];
@@ -136,14 +136,18 @@ try {
     $_SESSION['otp_pending_must_change_pw'] = ($user['must_change_password'] == 1) ? true : false;
     $_SESSION['otp_remember_me']            = isset($_POST['remember']);
 
-    // ── 7. Generate OTP and store in DB ──────────────────────────────────────
+    // ── 7. Generate OTP and store in DB ──────────────────────────────────
+    // PostgreSQL interval syntax: NOW() + INTERVAL '10 minutes'
     $otp  = (string) random_int(100000, 999999);
-    $stmt = $mysqli->prepare("UPDATE users SET otp_code = ?, otp_expiry = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id = ?");
-    $stmt->bind_param("si", $otp, $user['id']);
-    $stmt->execute();
-    $stmt->close();
+    $stmt = $mysqli->prepare("
+        UPDATE users
+        SET otp_code   = ?,
+            otp_expiry = NOW() + INTERVAL '10 minutes'
+        WHERE id = ?
+    ");
+    $stmt->execute([$otp, $user['id']]);
 
-    // ── 8. Send OTP email ─────────────────────────────────────────────────────
+    // ── 8. Send OTP email ─────────────────────────────────────────────────
     $emailTo = $user['personal_email'] ?: $user['institutional_email'];
     $subject = "Your SIEMS Verification Code";
     $body    = "
@@ -164,34 +168,22 @@ try {
 
     if (!sendEmail($emailTo, $subject, $body)) {
         $stmt = $mysqli->prepare("UPDATE users SET otp_code = NULL, otp_expiry = NULL WHERE id = ?");
-        $stmt->bind_param("i", $user['id']);
-        $stmt->execute();
-        $stmt->close();
+        $stmt->execute([$user['id']]);
         logActivity($mysqli, $displayId, $user['role'], 'OTP Send Failed',
             "Could not send OTP email to {$emailTo}.", $displayId, 'Failed');
-        $mysqli->close();
         header("location: login.php?error=" . urlencode("Could not send verification email. Please try again."));
         exit;
     }
 
-    logActivity(
-        $mysqli,
-        $displayId,
-        $user['role'],
-        'OTP Sent',
-        "Verification code sent to {$emailTo} for login.",
-        $displayId,
-        'Success'
-    );
+    logActivity($mysqli, $displayId, $user['role'], 'OTP Sent',
+        "Verification code sent to {$emailTo} for login.", $displayId, 'Success');
 
-    $mysqli->close();
-
-    // ── 9. Redirect to OTP verification page ─────────────────────────────────
+    // ── 9. Redirect to OTP verification page ─────────────────────────────
     header("location: verify_otp.php");
     exit;
 
 } catch (Exception $e) {
-    if (isset($mysqli)) $mysqli->close();
+    error_log("Auth error: " . $e->getMessage());
     header("location: login.php?error=" . urlencode("A system error occurred. Please try again."));
     exit;
 }
