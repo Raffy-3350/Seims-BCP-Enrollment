@@ -29,11 +29,12 @@ try {
     $conn = getDBConnection();
 
     // Confirm student exists and is pending
-    $check = $conn->prepare("SELECT id, status, first_name, middle_name, last_name, program, year_level FROM students WHERE id = ?");
-    $check->bind_param("i", $studentId);
-    $check->execute();
-    $student = $check->get_result()->fetch_assoc();
-    $check->close();
+    $check = $conn->prepare("
+        SELECT id, status, first_name, middle_name, last_name, program, year_level
+        FROM students WHERE id = ?
+    ");
+    $check->execute([$studentId]);
+    $student = $check->fetch(PDO::FETCH_ASSOC);
 
     if (!$student) {
         echo json_encode(['success' => false, 'message' => 'Student not found.']);
@@ -44,7 +45,6 @@ try {
         exit;
     }
 
-    // Build full name for audit log
     $fullName = trim(
         $student['first_name'] . ' ' .
         ($student['middle_name'] ? $student['middle_name'] . ' ' : '') .
@@ -54,7 +54,6 @@ try {
     $newStatus    = $action === 'approve' ? 'approved' : 'rejected';
     $finalRemarks = $remarks ?: ($action === 'approve' ? 'Approved by admin.' : 'Rejected by admin.');
 
-    // Fixed: use MySQLi bind_param (not PDO named placeholders)
     $stmt = $conn->prepare("
         UPDATE students
         SET status      = ?,
@@ -63,34 +62,22 @@ try {
             updated_at  = NOW()
         WHERE id = ?
     ");
-    $stmt->bind_param("ssi", $newStatus, $finalRemarks, $studentId);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute([$newStatus, $finalRemarks, $studentId]);
 
-    // Audit Log
+    // Audit log
     if ($action === 'approve') {
         logAudit(
-            $conn,
-            $adminName,
-            $adminRole,
+            $conn, $adminName, $adminRole,
             'Student Approved',
-            "Registration for {$fullName} (Program: {$student['program']}, "
-            . "Year: {$student['year_level']}) was approved and added to the provisioning queue. "
-            . "Remarks: {$finalRemarks}",
-            $fullName,
-            'Success'
+            "Registration for {$fullName} (Program: {$student['program']}, Year: {$student['year_level']}) was approved. Remarks: {$finalRemarks}",
+            $fullName, 'Success'
         );
     } else {
         logAudit(
-            $conn,
-            $adminName,
-            $adminRole,
+            $conn, $adminName, $adminRole,
             'Student Registration Rejected',
-            "Registration for {$fullName} (Program: {$student['program']}, "
-            . "Year: {$student['year_level']}) was rejected. "
-            . "Remarks: {$finalRemarks}",
-            $fullName,
-            'Failed'
+            "Registration for {$fullName} (Program: {$student['program']}, Year: {$student['year_level']}) was rejected. Remarks: {$finalRemarks}",
+            $fullName, 'Failed'
         );
     }
 
