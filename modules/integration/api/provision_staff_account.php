@@ -176,19 +176,28 @@ try {
     $conn->commit();
 
     // ── 9. Send credentials email ─────────────────────────────────────
-    $subject = "Your BCP SIEMS Account Has Been Created";
-    $body    = "
-        <p>Hello {$fullName},</p>
-        <p>Your SIEMS {$roleLabel} account has been successfully created. Use the credentials below to sign in:</p>
-        <ul>
-            <li><strong>Staff ID:</strong> {$userId}</li>
-            <li><strong>Institutional Email:</strong> {$finalEmail}</li>
-            <li><strong>Temporary Password:</strong> {$tempPassword}</li>
-        </ul>
-        <p>For security, please change your password immediately after first login.</p>
-        <p>Login page: <a href=\"https://seims-bcp-enrollment-production.up.railway.app/pages/login.php\">Open SIEMS Login</a></p>
-    ";
-    $emailSent = sendEmail($staff['personal_email'], $subject, $body);
+    // FIX: Set a max execution time for the email step only.
+    // If SMTP hangs, it will give up after 15 seconds instead of freezing forever.
+    $emailSent = false;
+    try {
+        set_time_limit(20); // give email max 20 seconds total
+        $subject = "Your BCP SIEMS Account Has Been Created";
+        $body    = "
+            <p>Hello {$fullName},</p>
+            <p>Your SIEMS {$roleLabel} account has been successfully created. Use the credentials below to sign in:</p>
+            <ul>
+                <li><strong>Staff ID:</strong> {$userId}</li>
+                <li><strong>Institutional Email:</strong> {$finalEmail}</li>
+                <li><strong>Temporary Password:</strong> {$tempPassword}</li>
+            </ul>
+            <p>For security, please change your password immediately after first login.</p>
+            <p>Login page: <a href=\"https://seims-bcp-enrollment-production.up.railway.app/pages/login.php\">Open SIEMS Login</a></p>
+        ";
+        $emailSent = sendEmail($staff['personal_email'], $subject, $body);
+    } catch (Exception $emailErr) {
+        error_log('[Provision Email Error] ' . $emailErr->getMessage());
+        $emailSent = false;
+    }
 
     // ── 10. Audit log ─────────────────────────────────────────────────
     logAudit($conn, $adminName, $adminRole, 'Staff Account Created',
