@@ -107,24 +107,25 @@ try {
     $hashedPassword = password_hash($tempPassword, PASSWORD_BCRYPT);
 
     // ── 6. Insert into users ──────────────────────────────────────────
+    // FIX: Added temporary_password — column is NOT NULL in the DB
     $insert = $conn->prepare("
         INSERT INTO users (
             user_id,
             first_name, middle_name, last_name,
-            institutional_email, password, must_change_password, role,
+            institutional_email, password, temporary_password, must_change_password, role,
             personal_email, mobile_number,
             birth_date, gender,
             street_address, city, province, zip_code,
             status, created_at
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, 1, 'student',
+            ?, ?, ?, ?, ?, ?, ?, 1, 'student',
             ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW()
         )
     ");
     $insert->execute([
         $userId,
         $student['first_name'], $student['middle_name'], $student['last_name'],
-        $finalEmail, $hashedPassword,
+        $finalEmail, $hashedPassword, $tempPassword,   // <-- temporary_password added
         $student['personal_email'], $student['mobile_number'],
         $student['birth_date'], $student['gender'],
         $student['street_address'], $student['city'], $student['province'], $student['zip_code'],
@@ -149,20 +150,27 @@ try {
 
     $conn->commit();
 
-    // ── 9. Send credentials email ─────────────────────────────────────
-    $subject = "Your BCP SIEMS Account Has Been Created";
-    $body    = "
-        <p>Hello {$fullName},</p>
-        <p>Your SIEMS student account has been successfully created. Use the credentials below to sign in:</p>
-        <ul>
-            <li><strong>User ID:</strong> {$userId}</li>
-            <li><strong>Institutional Email:</strong> {$finalEmail}</li>
-            <li><strong>Temporary Password:</strong> {$tempPassword}</li>
-        </ul>
-        <p>For security, please change your password immediately after first login.</p>
-        <p>Login page: <a href=\"http://localhost/bcp-enrollment%20BACKUP/pages/login.php\">Open SIEMS Login</a></p>
-    ";
-    $emailSent = sendEmail($student['personal_email'], $subject, $body);
+    // ── 9. Send credentials email (non-blocking) ──────────────────────
+    $emailSent = false;
+    try {
+        set_time_limit(20);
+        $subject = "Your BCP SIEMS Account Has Been Created";
+        $body    = "
+            <p>Hello {$fullName},</p>
+            <p>Your SIEMS student account has been successfully created. Use the credentials below to sign in:</p>
+            <ul>
+                <li><strong>User ID:</strong> {$userId}</li>
+                <li><strong>Institutional Email:</strong> {$finalEmail}</li>
+                <li><strong>Temporary Password:</strong> {$tempPassword}</li>
+            </ul>
+            <p>For security, please change your password immediately after first login.</p>
+            <p>Login page: <a href=\"https://seims-bcp-enrollment-production.up.railway.app/pages/login.php\">Open SIEMS Login</a></p>
+        ";
+        $emailSent = sendEmail($student['personal_email'], $subject, $body);
+    } catch (Exception $emailErr) {
+        error_log('[Provision Email Error] ' . $emailErr->getMessage());
+        $emailSent = false;
+    }
 
     // ── 10. Audit log ─────────────────────────────────────────────────
     logAudit($conn, $adminName, $adminRole, 'Account Created',
