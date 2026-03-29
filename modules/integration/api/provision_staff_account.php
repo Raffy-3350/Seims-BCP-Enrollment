@@ -140,25 +140,27 @@ try {
     $hashedPassword = password_hash($tempPassword, PASSWORD_BCRYPT);
 
     // ── 6. Insert into users ─────────────────────────────────────────
- $insert = $conn->prepare("
-    INSERT INTO users (
-        user_id,
-        first_name, middle_name, last_name,
-        institutional_email, password, must_change_password, role,
-        personal_email, mobile_number,
-        birth_date, gender,
-        street_address, city, province, zip_code,
-        department_program, employment_type, access_level,
-        status, created_at
-    ) VALUES (
-        ?, ?, ?, ?, ?, ?, 1, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, 'active', NOW()
-    )
-");
+    // FIX: bind_param now correctly has 18 "s" characters matching all 18 variables
+    $insert = $conn->prepare("
+        INSERT INTO users (
+            user_id,
+            first_name, middle_name, last_name,
+            institutional_email, password, must_change_password, role,
+            personal_email, mobile_number,
+            birth_date, gender,
+            street_address, city, province, zip_code,
+            department_program, employment_type, access_level,
+            status, created_at
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, 1, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, 'active', NOW()
+        )
+    ");
 
+    // FIX: was "sssssssssssssss" (15) — now correctly "ssssssssssssssssss" (18)
     $insert->bind_param(
-        "sssssssssssssss",
+        "ssssssssssssssssss",
         $userId,
         $staff['first_name'],
         $staff['middle_name'],
@@ -174,20 +176,21 @@ try {
         $staff['city'],
         $staff['province'],
         $staff['zip_code'],
-        $staff['department'],       // → department_program
-      $staff['employment_type'],  // → employment_type
-    $staff['access_level']      // → access_level
+        $staff['department'],      // → department_program
+        $staff['employment_type'], // → employment_type
+        $staff['access_level']     // → access_level
     );
     $insert->execute();
     $insert->close();
 
     // ── 7. Insert staff-specific fields into staff_details ───────────
-    // Creates the table if it doesn't exist yet, same pattern as staff_register.php
     $conn->query("
         CREATE TABLE IF NOT EXISTS `staff_details` (
             `id`                int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
             `user_id`           varchar(30) NOT NULL,
             `department`        varchar(100) DEFAULT NULL,
+            `position`          varchar(100) DEFAULT NULL,
+            `specialization`    varchar(100) DEFAULT NULL,
             `employment_type`   varchar(50)  DEFAULT 'Permanent',
             `access_level`      varchar(30)  DEFAULT 'Standard',
             `created_at`        datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -196,16 +199,19 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
+    // FIX: now also saves position and specialization (they were lost before)
     $details = $conn->prepare("
         INSERT INTO staff_details (
-            user_id, department,
+            user_id, department, position, specialization,
             employment_type, access_level
-        ) VALUES (?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
     ");
     $details->bind_param(
-        "ssss",
+        "ssssss",
         $userId,
         $staff['department'],
+        $staff['position'],
+        $staff['specialization'],
         $staff['employment_type'],
         $staff['access_level']
     );
