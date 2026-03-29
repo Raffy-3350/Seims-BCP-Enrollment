@@ -32,12 +32,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["_action"]) && $_POST[
     } else {
         try {
             $hash = password_hash($pw, PASSWORD_DEFAULT);
-            // Updated to PDO syntax
-            $stmt = $mysqli->prepare("UPDATE users SET password = :password, must_change_password = 0, password_changed = 1, manually_changed_password = 0 WHERE id = :id");
-            $stmt->bindParam(':password', $hash, PDO::PARAM_STR);
-            $stmt->bindParam(':id', $_SESSION['id'], PDO::PARAM_INT);
+            $stmt = $mysqli->prepare("UPDATE users SET password = ?, must_change_password = 0, password_changed = 1, manually_changed_password = 0 WHERE id = ?");
+            $stmt->bind_param("si", $hash, $_SESSION['id']);
             $stmt->execute();
-            
+            $stmt->close();
             unset($_SESSION['must_change_password']);
             $destination = (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'student')
                 ? 'student_navigation.php'
@@ -62,38 +60,35 @@ if (!isset($_SESSION["loggedin"]) && isset($_COOKIE['remember_token'])) {
             id,
             user_id,
             institutional_email,
-            TRIM(CONCAT(first_name, ' ', COALESCE(middle_name,''), ' ', last_name)) AS full_name,
+            TRIM(CONCAT(first_name, ' ', IFNULL(middle_name,''), ' ', last_name)) AS full_name,
             role,
             must_change_password
         FROM users
-        WHERE remember_token = :token AND token_expiry > :current_time
+        WHERE remember_token = ? AND token_expiry > ?
         LIMIT 1
     ";
-    
-    try {
-        // Updated to PDO syntax
-        $stmt = $mysqli->prepare($sql);
-        $stmt->bindParam(':token', $token, PDO::PARAM_STR);
-        $stmt->bindParam(':current_time', $current_time, PDO::PARAM_STR);
-        $stmt->execute();
-        
-        if ($stmt->rowCount() == 1) {
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($stmt = $mysqli->prepare($sql)) {
+        $stmt->bind_param("ss", $token, $current_time);
+        if ($stmt->execute()) {
+            $stmt->store_result();
+            if ($stmt->num_rows == 1) {
+                $stmt->bind_result($id, $user_id, $institutional_email, $full_name, $role, $must_change_password);
+                $stmt->fetch();
 
-            session_regenerate_id(true);
-            $_SESSION["loggedin"]      = true;
-            $_SESSION["id"]            = $row['id'];
-            $_SESSION["username"]      = $row['user_id'];
-            $_SESSION["full_name"]     = $row['full_name'];
-            $_SESSION["role"]          = $row['role'];
-            $_SESSION["email"]         = $row['institutional_email'];
-            $_SESSION["last_activity"] = time();
-            if ($row['must_change_password']) {
-                $_SESSION["must_change_password"] = true;
+                session_regenerate_id(true);
+                $_SESSION["loggedin"]      = true;
+                $_SESSION["id"]            = $id;
+                $_SESSION["username"]      = $user_id;
+                $_SESSION["full_name"]     = $full_name;
+                $_SESSION["role"]          = $role;
+                $_SESSION["email"]         = $institutional_email;
+                $_SESSION["last_activity"] = time();
+                if ($must_change_password) {
+                    $_SESSION["must_change_password"] = true;
+                }
             }
         }
-    } catch (PDOException $e) {
-        // Silently fail if remember cookie check fails to prevent breaking the page
+        $stmt->close();
     }
 }
 
