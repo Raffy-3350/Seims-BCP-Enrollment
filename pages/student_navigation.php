@@ -55,6 +55,7 @@ $initials = strtoupper($initials);
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/assets/img/siems.png" type="image/x-icon">
 
     <script src="https://cdn.tailwindcss.com"></script>
 
