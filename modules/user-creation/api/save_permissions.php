@@ -1,4 +1,5 @@
 <?php
+// save_permissions.php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -13,41 +14,64 @@ try {
     $role           = $data['role']        ?? null;
     $newPermissions = $data['permissions'] ?? null;
 
-    if (empty($role) || !in_array($role, VALID_ROLES)) throw new Exception('Invalid or missing role.');
-    if (!is_array($newPermissions))                    throw new Exception('Invalid permissions data.');
+    if (empty($role) || !in_array($role, VALID_ROLES)) {
+        throw new Exception('Invalid or missing role.');
+    }
+    if (!is_array($newPermissions)) {
+        throw new Exception('Invalid or missing permissions data.');
+    }
 
     $conn = getDBConnection();
     $conn->beginTransaction();
 
+    // Fetch current permissions for diff/audit log
     $stmt = $conn->prepare("SELECT permissions FROM role_permissions WHERE role = ?");
     $stmt->execute([$role]);
-    $row  = $stmt->fetch(PDO::FETCH_ASSOC);
-    $old  = $row ? (json_decode($row['permissions'], true) ?: []) : [];
+    $row            = $stmt->fetch();
+    $oldPermissions = $row ? (json_decode($row['permissions'], true) ?: []) : [];
 
-    $granted = $revoked = [];
+    // Build audit diff
+    $granted = [];
+    $revoked = [];
     foreach (array_keys($newPermissions) as $perm) {
-        if ($newPermissions[$perm]  && !($old[$perm] ?? false)) $granted[] = "'$perm'";
-        if (!$newPermissions[$perm] &&  ($old[$perm] ?? false)) $revoked[] = "'$perm'";
+        $isNew = $newPermissions[$perm];
+        $isOld = $oldPermissions[$perm] ?? false;
+        if ($isNew && !$isOld)  $granted[] = "'$perm'";
+        if (!$isNew && $isOld)  $revoked[] = "'$perm'";
     }
-    $changes = [];
-    if ($granted) $changes[] = "Granted: " . implode(', ', $granted);
-    if ($revoked) $changes[] = "Revoked: " . implode(', ', $revoked);
-    $logDetails = $changes
-        ? implode(' | ', $changes) . "."
-        : "Reviewed permissions for '{$role}' role. No changes were made.";
 
-    // PostgreSQL upsert — requires role to be a unique/PK column in role_permissions
-    $stmt = $conn->prepare("
-        INSERT INTO role_permissions (role, permissions)
-        VALUES (?, ?)
-        ON CONFLICT (role) DO UPDATE SET permissions = EXCLUDED.permissions
-    ");
-    $stmt->execute([$role, json_encode($newPermissions)]);
+    if (!empty($granted) || !empty($revoked)) {
+        $changes = [];
+        if (!empty($granted)) $changes[] = "Granted: "  . implode(', ', $granted);
+        if (!empty($revoked)) $changes[] = "Revoked: "  . implode(', ', $revoked);
+        $logDetails = implode('. ', $changes) . ".";
+    } else {
+        $logDetails = "Reviewed permissions for '{$role}' role. No changes were made.";
+    }
 
-    logActivity($conn, 'admin@bcp.edu.ph', 'superadmin', 'Permissions Changed', $logDetails, ucfirst($role) . ' Role', 'Success');
+    $jsonPermissions = json_encode($newPermissions);
+
+    // FIX: replaced MySQL "ON DUPLICATE KEY UPDATE" with a safe manual upsert
+    // that works on PostgreSQL regardless of whether a UNIQUE constraint exists.
+    $checkStmt = $conn->prepare("SELECT id FROM role_permissions WHERE role = ?");
+    $checkStmt->execute([$role]);
+    $existing = $checkStmt->fetch();
+
+    if ($existing) {
+        $upsert = $conn->prepare("UPDATE role_permissions SET permissions = ? WHERE role = ?");
+        $upsert->execute([$jsonPermissions, $role]);
+    } else {
+        $upsert = $conn->prepare("INSERT INTO role_permissions (role, permissions) VALUES (?, ?)");
+        $upsert->execute([$role, $jsonPermissions]);
+    }
+
+    $adminUser = 'admin@bcp.edu.ph';
+    $adminRole = 'superadmin';
+    logActivity($conn, $adminUser, $adminRole, 'Permissions Changed', $logDetails, ucfirst($role) . ' Role', 'Success');
 
     $conn->commit();
-    echo json_encode(['success' => true, 'message' => "Permissions for '{$role}' saved."]);
+
+    echo json_encode(['success' => true, 'message' => "Permissions for role '{$role}' saved successfully."]);
 
 } catch (Exception $e) {
     if (isset($conn)) $conn->rollBack();
