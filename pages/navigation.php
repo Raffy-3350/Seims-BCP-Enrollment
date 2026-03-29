@@ -1377,10 +1377,6 @@ tr.is-open .audit-toggle-icon { transform: rotate(90deg); }
                                 <p id="umPanelSub" style="font-size:0.75rem;color:#1535a0;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;">User Management — Accounts &amp; permissions</p>
                             </div>
                         </div>
-                        <a href="/modules/integration/pages/student_registration.php" id="addUserBtn" style="padding:0.75rem 1.5rem;background:linear-gradient(135deg,#0d2470,#1535a0);color:white;border-radius:0.6rem;font-size:0.75rem;font-weight:900;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.1em;text-transform:uppercase;display:flex;align-items:center;gap:0.5rem;text-decoration:none;box-shadow:0 6px 20px rgba(13,36,112,0.3);transition:all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg,#1535a0,#1d4ed8)'" onmouseout="this.style.background='linear-gradient(135deg,#0d2470,#1535a0)'">
-                            <i class="fas fa-plus"></i>
-                            <span>ADD NEW USER</span>
-                        </a>
                     </div>
                     <!-- JS badge now attached to sidebar Provision item -->
                 </div>
