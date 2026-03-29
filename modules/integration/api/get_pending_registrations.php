@@ -8,7 +8,6 @@ header('Access-Control-Allow-Origin: *');
 require_once __DIR__ . '/config.php';
 
 try {
-    // Fixed: use getDBConnection() consistently, not the raw $mysqli variable
     $conn = getDBConnection();
 
     $stmt = $conn->query("
@@ -29,11 +28,7 @@ try {
         ORDER BY s.created_at ASC
     ");
 
-    $students = [];
-    while ($row = $stmt->fetch_assoc()) {
-        $students[] = $row;
-    }
-    $stmt->close();
+    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'success'  => true,
