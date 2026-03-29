@@ -1,3 +1,4 @@
+<?php
 $host     = getenv('DB_HOST');     // e.g., aws-0-us-east-1.pooler.supabase.com
 $port     = getenv('DB_PORT');     // 5432 or 6543
 $db_name  = getenv('DB_NAME');     // usually 'postgres'
@@ -14,3 +15,4 @@ try {
     // This will help you see the REAL error in your browser temporarily
     die("Connection Failed: " . $e->getMessage()); 
 }
+?>
