@@ -139,18 +139,22 @@ try {
     ]);
 
     // ── 7. Insert into staff_details ─────────────────────────────────
+    // Create table if it doesn't exist at all
     $conn->exec("
         CREATE TABLE IF NOT EXISTS staff_details (
             id               SERIAL PRIMARY KEY,
             user_id          VARCHAR(30) NOT NULL UNIQUE,
             department       VARCHAR(100) DEFAULT NULL,
-            position         VARCHAR(100) DEFAULT NULL,
-            specialization   VARCHAR(100) DEFAULT NULL,
             employment_type  VARCHAR(50)  DEFAULT 'Permanent',
-            access_level     VARCHAR(30)  DEFAULT 'Standard',
             created_at       TIMESTAMP NOT NULL DEFAULT NOW()
         )
     ");
+
+    // FIX: ALTER TABLE to add missing columns if they don't exist yet.
+    // This handles cases where the table was created without these columns.
+    $conn->exec("ALTER TABLE staff_details ADD COLUMN IF NOT EXISTS position       VARCHAR(100) DEFAULT NULL");
+    $conn->exec("ALTER TABLE staff_details ADD COLUMN IF NOT EXISTS specialization VARCHAR(100) DEFAULT NULL");
+    $conn->exec("ALTER TABLE staff_details ADD COLUMN IF NOT EXISTS access_level   VARCHAR(30)  DEFAULT 'Standard'");
 
     $details = $conn->prepare("
         INSERT INTO staff_details (user_id, department, position, specialization, employment_type, access_level)
