@@ -1,21 +1,20 @@
 <?php
-// We use getenv() to pull these from your Railway Variables
+// Fetches the variables you just added to Railway
 $host = getenv('DB_HOST');
-$port = getenv('DB_PORT') ?: '5432';
-$dbname = getenv('DB_NAME') ?: 'postgres';
-$user = getenv('DB_USER') ?: 'postgres';
+$port = getenv('DB_PORT');
+$dbname = getenv('DB_NAME');
+$user = getenv('DB_USER');
 $password = getenv('DB_PASSWORD');
 
 try {
-    // Supabase uses PostgreSQL, so we use the 'pgsql' driver
+    // Supabase requires pgsql and sslmode=require
     $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
     $mysqli = new PDO($dsn, $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
 } catch (PDOException $e) {
-    // This will help you see the exact error in your Railway logs
+    // This will help you debug if the connection still fails
     error_log("Connection failed: " . $e->getMessage());
-    die("Database connection error. Please check the logs.");
+    die("Database connection error. Check your Railway logs.");
 }
 ?>
