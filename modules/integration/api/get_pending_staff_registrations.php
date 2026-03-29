@@ -38,11 +38,7 @@ try {
         ORDER BY sp.created_at ASC
     ");
 
-    $staff = [];
-    while ($row = $stmt->fetch_assoc()) {
-        $staff[] = $row;
-    }
-    $stmt->close();
+    $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'success' => true,
