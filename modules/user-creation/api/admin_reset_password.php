@@ -1,10 +1,11 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// admin_reset_password.php
+ini_set('display_errors', 0);   // FIX: hide errors so they never corrupt JSON output
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 ob_start();
-session_start();
 
+session_start();
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
@@ -43,13 +44,12 @@ if (strlen($password) < 10 ||
 }
 
 try {
-    $conn = getDBConnection();
+    $conn = getDBConnection(); // returns PDO
 
+    // FIX: was using MySQLi bind_param/get_result — replaced with PDO execute()
     $check = $conn->prepare("SELECT first_name, last_name, role FROM users WHERE user_id = ?");
-    $check->bind_param("s", $userId);
-    $check->execute();
-    $user = $check->get_result()->fetch_assoc();
-    $check->close();
+    $check->execute([$userId]);
+    $user = $check->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
         ob_end_clean();
@@ -60,6 +60,7 @@ try {
     $fullName = $user['first_name'] . ' ' . $user['last_name'];
     $hash     = password_hash($password, PASSWORD_DEFAULT);
 
+    // FIX: was using MySQLi bind_param — replaced with PDO execute()
     $stmt = $conn->prepare("
         UPDATE users SET
             password               = ?,
@@ -70,9 +71,7 @@ try {
             updated_at             = NOW()
         WHERE user_id = ?
     ");
-    $stmt->bind_param("ss", $hash, $userId);
-    $stmt->execute();
-    $stmt->close();
+    $stmt->execute([$hash, $userId]);
 
     logAudit(
         $conn,
@@ -84,18 +83,16 @@ try {
         'Success'
     );
 
-    $buffered = ob_get_clean();
+    ob_end_clean();
     echo json_encode([
         'success' => true,
-        'message' => "Password for {$fullName} has been reset.",
-        'debug'   => $buffered // remove this line once working
+        'message' => "Password for {$fullName} has been reset successfully.",
     ]);
 
 } catch (Exception $e) {
-    $buffered = ob_get_clean();
+    ob_end_clean();
     echo json_encode([
         'success' => false,
         'message' => 'Database error: ' . $e->getMessage(),
-        'debug'   => $buffered
     ]);
 }
