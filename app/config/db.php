@@ -1,19 +1,16 @@
-<?php
-// These variables pull directly from your Railway Dashboard
-$host = getenv('DB_HOST');
-$port = getenv('DB_PORT');
-$dbname = getenv('DB_NAME');
-$user = getenv('DB_USER');
-$password = getenv('DB_PASSWORD');
+$host     = getenv('DB_HOST');     // e.g., aws-0-us-east-1.pooler.supabase.com
+$port     = getenv('DB_PORT');     // 5432 or 6543
+$db_name  = getenv('DB_NAME');     // usually 'postgres'
+$user     = getenv('DB_USER');     // usually 'postgres.your-project-id'
+$password = getenv('DB_PASSWORD'); // Your DATABASE password (not login password)
 
 try {
-    // This 'pgsql' driver is the bridge to Supabase
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
+    $dsn = "pgsql:host=$host;port=$port;dbname=$db_name;sslmode=require";
     $mysqli = new PDO($dsn, $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
 } catch (PDOException $e) {
-    // This is the error message currently showing in your browser
-    die("Database connection error. Check your Railway logs."); 
+    // This will help you see the REAL error in your browser temporarily
+    die("Connection Failed: " . $e->getMessage()); 
 }
-?>
